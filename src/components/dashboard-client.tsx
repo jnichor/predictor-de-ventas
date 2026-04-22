@@ -336,7 +336,7 @@ export function DashboardClient() {
     }
 
     setLoginForm(emptyLoginForm);
-    setNotice('Cuenta creada. Ahora inicia sesion.');
+    setNotice('Revisa tu correo electrónico proporcionado para confirmar tu cuenta');
     setAuthMode('login');
   }
 
