@@ -14,8 +14,19 @@ export function BarcodeScanner({ onDetected }: BarcodeScannerProps) {
 
   useEffect(() => {
     return () => {
-      void scannerRef.current?.stop().catch(() => undefined);
-      scannerRef.current?.clear().catch(() => undefined);
+      void (async () => {
+        try {
+          await scannerRef.current?.stop();
+        } catch {
+          return undefined;
+        }
+
+        try {
+          await scannerRef.current?.clear();
+        } catch {
+          return undefined;
+        }
+      })();
     };
   }, []);
 
@@ -47,8 +58,17 @@ export function BarcodeScanner({ onDetected }: BarcodeScannerProps) {
 
   const stopScanner = async () => {
     setStatus('idle');
-    await scannerRef.current?.stop().catch(() => undefined);
-    scannerRef.current?.clear().catch(() => undefined);
+    try {
+      await scannerRef.current?.stop();
+    } catch {
+      // ignore
+    }
+
+    try {
+      await scannerRef.current?.clear();
+    } catch {
+      // ignore
+    }
   };
 
   return (
