@@ -21,27 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
+import { SalesTrendChart } from '@/components/charts/sales-trend-chart';
 import { useAuth } from '@/hooks/use-auth';
 import { useDashboardData, type Period } from '@/hooks/use-dashboard-data';
-import { money, toDateLabel } from '@/lib/utils';
-
-function buildTrendPoints(salesByPeriod: Array<{ label: string; value: number }> | undefined) {
-  if (!salesByPeriod?.length) return [];
-  return salesByPeriod.map((p) => ({ label: toDateLabel(p.label), value: p.value }));
-}
-
-function linePath(points: Array<{ value: number }>) {
-  if (points.length < 2) return '';
-  const max = Math.max(...points.map((p) => p.value), 1);
-  return points
-    .map((p, i) => {
-      const x = (i / (points.length - 1)) * 100;
-      const y = 100 - (p.value / max) * 70 - 15;
-      return `${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
-    })
-    .join(' ');
-}
+import { money } from '@/lib/utils';
 
 export default function DashboardPage() {
   const { session } = useAuth();
@@ -49,7 +32,7 @@ export default function DashboardPage() {
   const { products, sales, reports, forecast, isLoading, period, setPeriod } =
     useDashboardData(accessToken);
 
-  const trendPoints = useMemo(() => buildTrendPoints(reports?.salesByPeriod), [reports]);
+  const trendPoints = useMemo(() => reports?.salesByPeriod ?? [], [reports]);
 
   const totalStock = useMemo(
     () => products.reduce((sum, p) => sum + p.currentStock, 0),
@@ -109,7 +92,7 @@ export default function DashboardPage() {
             </SelectContent>
           </Select>
           <Button asChild>
-            <Link href="/operaciones?tab=sale">
+            <Link href="/ventas">
               <ReceiptText className="mr-2 size-4" />
               Nueva venta
             </Link>
@@ -159,34 +142,7 @@ export default function DashboardPage() {
             {isLoading ? (
               <Skeleton className="h-[240px] w-full" />
             ) : trendPoints.length >= 2 ? (
-              <div className="space-y-2">
-                <svg viewBox="0 0 100 100" className="h-[240px] w-full" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.35" />
-                      <stop offset="100%" stopColor="var(--color-primary)" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  <path
-                    d={`${linePath(trendPoints)} L 100 100 L 0 100 Z`}
-                    fill="url(#chartGrad)"
-                  />
-                  <path
-                    d={linePath(trendPoints)}
-                    fill="none"
-                    stroke="var(--color-primary)"
-                    strokeWidth="1.2"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                </svg>
-                <div className="grid grid-cols-7 gap-2 text-xs text-muted-foreground">
-                  {trendPoints.map((p) => (
-                    <span key={p.label} className="truncate text-center">
-                      {p.label}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              <SalesTrendChart data={trendPoints} className="h-[240px] w-full" />
             ) : (
               <EmptyState
                 title="Todavía no hay ventas"
@@ -277,7 +233,7 @@ export default function DashboardPage() {
                 <CardDescription>Productos a reabastecer</CardDescription>
               </div>
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/operaciones?tab=inventory">
+                <Link href="/inventario">
                   Ver todo
                   <ArrowRight className="ml-1 size-3" />
                 </Link>

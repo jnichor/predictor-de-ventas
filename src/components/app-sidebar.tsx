@@ -35,14 +35,14 @@ type NavItem = {
 
 const primaryNav: NavItem[] = [
   { title: 'Panel', href: '/dashboard', icon: LayoutDashboard },
-  { title: 'Ventas', href: '/operaciones?tab=sale', icon: ReceiptText },
-  { title: 'Inventario', href: '/operaciones?tab=inventory', icon: Boxes },
-  { title: 'Reportes', href: '/operaciones?tab=analytics', icon: BarChart3 },
+  { title: 'Ventas', href: '/ventas', icon: ReceiptText },
+  { title: 'Inventario', href: '/inventario', icon: Boxes },
+  { title: 'Reportes', href: '/reportes', icon: BarChart3 },
 ];
 
 const adminNav: NavItem[] = [
-  { title: 'Productos', href: '/operaciones?tab=admin', icon: Settings, adminOnly: true },
-  { title: 'Usuarios', href: '/operaciones?tab=users', icon: UserPlus, adminOnly: true },
+  { title: 'Productos', href: '/productos', icon: Settings, adminOnly: true },
+  { title: 'Usuarios', href: '/usuarios', icon: UserPlus, adminOnly: true },
 ];
 
 export function AppSidebar({ currentUser }: { currentUser: CurrentUser | null }) {
