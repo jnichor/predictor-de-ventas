@@ -19,7 +19,7 @@ type SalesTrendChartProps = {
 const chartConfig = {
   total: {
     label: 'Ventas',
-    color: 'var(--color-primary)',
+    color: 'var(--color-chart-1)',
   },
 } satisfies ChartConfig;
 
@@ -39,17 +39,29 @@ export function SalesTrendChart({ data, className }: SalesTrendChartProps) {
       <AreaChart data={formatted} margin={{ left: 4, right: 12, top: 8, bottom: 0 }}>
         <defs>
           <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="var(--color-total)" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="var(--color-total)" stopOpacity={0} />
+            <stop offset="0%" stopColor="var(--color-chart-1)" stopOpacity={0.5} />
+            <stop offset="50%" stopColor="var(--color-chart-3)" stopOpacity={0.25} />
+            <stop offset="100%" stopColor="var(--color-chart-2)" stopOpacity={0} />
+          </linearGradient>
+          <linearGradient id="salesStroke" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="var(--color-chart-1)" />
+            <stop offset="50%" stopColor="var(--color-chart-3)" />
+            <stop offset="100%" stopColor="var(--color-chart-2)" />
           </linearGradient>
         </defs>
-        <CartesianGrid vertical={false} strokeDasharray="3 3" />
+        <CartesianGrid
+          vertical={false}
+          strokeDasharray="3 3"
+          stroke="hsl(215 28% 40% / 0.25)"
+        />
         <XAxis
           dataKey="label"
           tickLine={false}
           axisLine={false}
           tickMargin={8}
           minTickGap={24}
+          stroke="hsl(215 20% 65%)"
+          fontSize={11}
         />
         <YAxis
           tickLine={false}
@@ -57,9 +69,11 @@ export function SalesTrendChart({ data, className }: SalesTrendChartProps) {
           tickMargin={8}
           width={52}
           tickFormatter={formatCurrencyShort}
+          stroke="hsl(215 20% 65%)"
+          fontSize={11}
         />
         <ChartTooltip
-          cursor={{ strokeDasharray: '3 3' }}
+          cursor={{ stroke: 'var(--color-chart-1)', strokeDasharray: '3 3', strokeOpacity: 0.5 }}
           content={
             <ChartTooltipContent
               indicator="dot"
@@ -70,9 +84,17 @@ export function SalesTrendChart({ data, className }: SalesTrendChartProps) {
         <Area
           type="monotone"
           dataKey="total"
-          stroke="var(--color-total)"
-          strokeWidth={2}
+          stroke="url(#salesStroke)"
+          strokeWidth={3}
           fill="url(#salesGradient)"
+          dot={{ r: 4, strokeWidth: 2, stroke: 'var(--color-chart-1)', fill: 'white' }}
+          activeDot={{
+            r: 7,
+            strokeWidth: 3,
+            stroke: 'var(--color-chart-1)',
+            fill: 'white',
+            style: { filter: 'drop-shadow(0 0 8px var(--color-chart-1))' },
+          }}
         />
       </AreaChart>
     </ChartContainer>

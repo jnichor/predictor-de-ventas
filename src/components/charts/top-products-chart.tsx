@@ -1,6 +1,6 @@
 'use client';
 
-import { Bar, BarChart, CartesianGrid, LabelList, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, XAxis, YAxis } from 'recharts';
 import {
   ChartContainer,
   ChartTooltip,
@@ -23,10 +23,19 @@ type TopProductsChartProps = {
 
 const chartConfig = {
   value: {
-    label: 'Unidades',
-    color: 'var(--color-primary)',
+    label: 'Valor',
+    color: 'var(--color-chart-1)',
   },
 } satisfies ChartConfig;
+
+// Rotamos entre los 5 colores vibrantes del tema
+const PALETTE = [
+  'var(--color-chart-1)',
+  'var(--color-chart-2)',
+  'var(--color-chart-3)',
+  'var(--color-chart-4)',
+  'var(--color-chart-5)',
+];
 
 export function TopProductsChart({
   data,
@@ -47,20 +56,31 @@ export function TopProductsChart({
       <BarChart
         data={formatted}
         layout="vertical"
-        margin={{ left: 8, right: 28, top: 8, bottom: 0 }}
+        margin={{ left: 8, right: 36, top: 8, bottom: 0 }}
       >
-        <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-        <XAxis type="number" tickLine={false} axisLine={false} tickFormatter={formatValue} />
+        <CartesianGrid
+          horizontal={false}
+          strokeDasharray="3 3"
+          stroke="hsl(215 28% 40% / 0.25)"
+        />
+        <XAxis
+          type="number"
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={formatValue}
+          stroke="hsl(215 20% 65%)"
+          fontSize={11}
+        />
         <YAxis
           type="category"
           dataKey="name"
           tickLine={false}
           axisLine={false}
           width={120}
-          tick={{ fontSize: 12 }}
+          tick={{ fontSize: 12, fill: 'hsl(215 20% 75%)' }}
         />
         <ChartTooltip
-          cursor={{ fill: 'var(--color-muted)', opacity: 0.4 }}
+          cursor={{ fill: 'hsl(215 28% 40% / 0.15)' }}
           content={
             <ChartTooltipContent
               indicator="dot"
@@ -68,12 +88,15 @@ export function TopProductsChart({
             />
           }
         />
-        <Bar dataKey="value" fill="var(--color-value)" radius={[0, 4, 4, 0]}>
+        <Bar dataKey="value" radius={[0, 6, 6, 0]}>
+          {formatted.map((_, i) => (
+            <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
+          ))}
           <LabelList
             dataKey="value"
             position="right"
             formatter={formatValue}
-            className="fill-foreground text-xs tabular-nums"
+            className="fill-foreground text-xs tabular-nums font-medium"
           />
         </Bar>
       </BarChart>

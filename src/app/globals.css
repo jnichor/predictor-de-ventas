@@ -46,40 +46,43 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.696 0.17 162.48);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.696 0.17 162.48);
+  /* Base sobre el gradient #0F172A → #1E1B4B
+     Los cards usan alpha para glass-effect sobre el gradient. */
+  --background: hsl(222 47% 8%);
+  --foreground: hsl(210 40% 98%);
+  --card: hsl(222 47% 12% / 0.6);
+  --card-foreground: hsl(210 40% 98%);
+  --popover: hsl(222 47% 12%);
+  --popover-foreground: hsl(210 40% 98%);
+  --primary: hsl(162 73% 46%);
+  --primary-foreground: hsl(222 47% 8%);
+  --secondary: hsl(222 40% 18%);
+  --secondary-foreground: hsl(210 40% 98%);
+  --muted: hsl(222 40% 16%);
+  --muted-foreground: hsl(215 20% 65%);
+  --accent: hsl(222 40% 18%);
+  --accent-foreground: hsl(210 40% 98%);
+  --destructive: hsl(0 75% 60%);
+  --destructive-foreground: hsl(210 40% 98%);
+  --border: hsl(215 28% 28% / 0.5);
+  --input: hsl(215 28% 28% / 0.5);
+  --ring: hsl(162 73% 46%);
 
-  --chart-1: oklch(0.696 0.17 162.48);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+  /* Colores vibrantes para KPI cards y charts — al estilo dashboard moderno */
+  --chart-1: hsl(162 73% 46%);  /* emerald — primary */
+  --chart-2: hsl(330 86% 60%);  /* pink */
+  --chart-3: hsl(262 83% 66%);  /* purple */
+  --chart-4: hsl(38 92% 60%);   /* amber */
+  --chart-5: hsl(199 89% 55%);  /* sky blue */
 
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.696 0.17 162.48);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.696 0.17 162.48);
+  --sidebar: hsl(222 47% 10% / 0.85);
+  --sidebar-foreground: hsl(210 40% 98%);
+  --sidebar-primary: hsl(162 73% 46%);
+  --sidebar-primary-foreground: hsl(222 47% 8%);
+  --sidebar-accent: hsl(222 40% 18% / 0.7);
+  --sidebar-accent-foreground: hsl(210 40% 98%);
+  --sidebar-border: hsl(215 28% 28% / 0.4);
+  --sidebar-ring: hsl(162 73% 46%);
 }
 
 @theme inline {
@@ -143,4 +146,22 @@ body {
 body {
   min-height: 100vh;
   font-family: var(--font-sans);
+}
+
+/* Fondo con gradient al estilo dashboard moderno cuando está en dark mode.
+   `fixed` hace que el gradient no se mueva al hacer scroll. */
+html.dark body {
+  background: linear-gradient(135deg, #0F172A, #1E1B4B) fixed;
+  background-attachment: fixed;
+}
+
+/* Glass effect en dark mode para cards shadcn "sueltas" (las que no son
+   VibrantKpiCard ni tienen bg propio con gradient). Se aplica a los Card
+   que NO tengan la clase `not-glass` (para opt-out) y NO sean kpi-vibrant. */
+html.dark [data-slot="card"]:not(.not-glass):not(.kpi-vibrant) {
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  background: hsl(222 47% 14% / 0.55);
+  border-color: hsl(215 28% 40% / 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }

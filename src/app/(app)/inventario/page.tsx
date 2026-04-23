@@ -10,6 +10,8 @@ import {
 } from '@/components/ui/accordion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
+import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range-picker';
+import { FacetedFilter } from '@/components/ui/faceted-filter';
 import { MovementForm } from '@/components/inventory/movement-form';
 import {
   buildMovementRows,
@@ -24,6 +26,8 @@ export default function InventarioPage() {
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dateRange, setDateRange] = useState<DateRangeValue>(undefined);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
 
   const loadData = useCallback(async () => {
     if (!accessToken) return;
@@ -60,10 +64,30 @@ export default function InventarioPage() {
     return map;
   }, [products]);
 
-  const movementRows = useMemo(
+  const allMovementRows = useMemo(
     () => buildMovementRows(movements, productById),
     [movements, productById],
   );
+
+  const movementRows = useMemo(() => {
+    return allMovementRows.filter((m) => {
+      if (dateRange?.from) {
+        const mDate = new Date(m.createdAt);
+        const from = new Date(dateRange.from);
+        from.setHours(0, 0, 0, 0);
+        if (mDate < from) return false;
+        if (dateRange.to) {
+          const to = new Date(dateRange.to);
+          to.setHours(23, 59, 59, 999);
+          if (mDate > to) return false;
+        }
+      }
+      if (selectedTypes.length > 0 && !selectedTypes.includes(m.type)) {
+        return false;
+      }
+      return true;
+    });
+  }, [allMovementRows, dateRange, selectedTypes]);
 
   if (!accessToken) return null;
 
@@ -203,6 +227,31 @@ export default function InventarioPage() {
               emptyTitle="Sin movimientos"
               emptyDescription="Registrá entradas, salidas o ajustes desde el formulario."
               pageSize={10}
+              toolbar={
+                <>
+                  <DateRangePicker value={dateRange} onChange={setDateRange} placeholder="Fechas" />
+                  <FacetedFilter
+                    title="Tipo"
+                    options={[
+                      { label: 'Entrada', value: 'entry' },
+                      { label: 'Salida', value: 'exit' },
+                      { label: 'Ajuste', value: 'adjustment' },
+                    ]}
+                    selected={selectedTypes}
+                    onChange={setSelectedTypes}
+                  />
+                </>
+              }
+              csv={{
+                filename: `movimientos-${new Date().toISOString().slice(0, 10)}`,
+                columns: [
+                  { header: 'Tipo', accessor: (r) => r.type },
+                  { header: 'Producto', accessor: (r) => r.productName },
+                  { header: 'Cantidad', accessor: (r) => r.quantity },
+                  { header: 'Motivo', accessor: (r) => r.reason },
+                  { header: 'Fecha', accessor: (r) => new Date(r.createdAt).toLocaleString('es-PE') },
+                ],
+              }}
             />
           </CardContent>
         </Card>

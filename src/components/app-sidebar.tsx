@@ -5,9 +5,11 @@ import { usePathname } from 'next/navigation';
 import {
   BarChart3,
   Boxes,
+  FileClock,
   LayoutDashboard,
   ReceiptText,
   Settings,
+  Sparkles,
   Store,
   UserPlus,
 } from 'lucide-react';
@@ -38,11 +40,13 @@ const primaryNav: NavItem[] = [
   { title: 'Ventas', href: '/ventas', icon: ReceiptText },
   { title: 'Inventario', href: '/inventario', icon: Boxes },
   { title: 'Reportes', href: '/reportes', icon: BarChart3 },
+  { title: 'Predicción', href: '/prediccion', icon: Sparkles },
 ];
 
 const adminNav: NavItem[] = [
   { title: 'Productos', href: '/productos', icon: Settings, adminOnly: true },
   { title: 'Usuarios', href: '/usuarios', icon: UserPlus, adminOnly: true },
+  { title: 'Auditoría', href: '/auditoria', icon: FileClock, adminOnly: true },
 ];
 
 export function AppSidebar({ currentUser }: { currentUser: CurrentUser | null }) {

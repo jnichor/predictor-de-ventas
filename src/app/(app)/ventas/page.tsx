@@ -21,6 +21,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
+import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range-picker';
+import { FacetedFilter } from '@/components/ui/faceted-filter';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { BarcodeScanner } from '@/components/barcode-scanner';
@@ -40,6 +42,9 @@ export default function VentasPage() {
   const [voidTarget, setVoidTarget] = useState<SaleRow | null>(null);
   const [voidReason, setVoidReason] = useState('');
   const [isVoiding, setIsVoiding] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRangeValue>(undefined);
+  const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
 
   const loadData = useCallback(async () => {
     if (!accessToken) return;
@@ -80,7 +85,38 @@ export default function VentasPage() {
     return map;
   }, [products]);
 
-  const saleRows = useMemo(() => buildSaleRows(sales, productById), [sales, productById]);
+  const allSaleRows = useMemo(() => buildSaleRows(sales, productById), [sales, productById]);
+
+  // Filtrado por fecha + canal + estado
+  const saleRows = useMemo(() => {
+    return allSaleRows.filter((sale) => {
+      if (dateRange?.from) {
+        const saleDate = new Date(sale.soldAt);
+        const from = new Date(dateRange.from);
+        from.setHours(0, 0, 0, 0);
+        if (saleDate < from) return false;
+        if (dateRange.to) {
+          const to = new Date(dateRange.to);
+          to.setHours(23, 59, 59, 999);
+          if (saleDate > to) return false;
+        }
+      }
+      if (selectedChannels.length > 0 && !selectedChannels.includes(sale.channel)) {
+        return false;
+      }
+      if (selectedStatus.length > 0) {
+        const status = sale.voidedAt ? 'voided' : 'valid';
+        if (!selectedStatus.includes(status)) return false;
+      }
+      return true;
+    });
+  }, [allSaleRows, dateRange, selectedChannels, selectedStatus]);
+
+  const channelOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of allSaleRows) set.add(s.channel);
+    return Array.from(set).map((c) => ({ label: c, value: c }));
+  }, [allSaleRows]);
 
   const salesColumns = useMemo(
     () =>
@@ -244,6 +280,42 @@ export default function VentasPage() {
             emptyTitle="Sin ventas registradas"
             emptyDescription="Las ventas que registres aparecen acá."
             pageSize={10}
+            toolbar={
+              <>
+                <DateRangePicker value={dateRange} onChange={setDateRange} placeholder="Fechas" />
+                {channelOptions.length > 0 ? (
+                  <FacetedFilter
+                    title="Canal"
+                    options={channelOptions}
+                    selected={selectedChannels}
+                    onChange={setSelectedChannels}
+                  />
+                ) : null}
+                <FacetedFilter
+                  title="Estado"
+                  options={[
+                    { label: 'Válida', value: 'valid' },
+                    { label: 'Anulada', value: 'voided' },
+                  ]}
+                  selected={selectedStatus}
+                  onChange={setSelectedStatus}
+                />
+              </>
+            }
+            csv={{
+              filename: `ventas-${new Date().toISOString().slice(0, 10)}`,
+              columns: [
+                { header: 'Producto', accessor: (r) => r.productName },
+                { header: 'Cantidad', accessor: (r) => r.quantity },
+                { header: 'Precio unitario', accessor: (r) => r.unitPrice },
+                { header: 'Descuento', accessor: (r) => r.discount },
+                { header: 'Total', accessor: (r) => r.total },
+                { header: 'Canal', accessor: (r) => r.channel },
+                { header: 'Estado', accessor: (r) => (r.voidedAt ? 'Anulada' : 'Válida') },
+                { header: 'Motivo anulación', accessor: (r) => r.voidedReason ?? '' },
+                { header: 'Fecha', accessor: (r) => new Date(r.soldAt).toLocaleString('es-PE') },
+              ],
+            }}
           />
         </CardContent>
       </Card>

@@ -66,12 +66,17 @@ export function useAuth() {
 
     void bootstrap();
 
-    const listener = supabase?.auth.onAuthStateChange(async (_event, nextSession) => {
+    const listener = supabase?.auth.onAuthStateChange(async (event, nextSession) => {
       if (cancelled) return;
-      if (!nextSession) {
+
+      // SIGNED_OUT → limpiamos estado. TOKEN_REFRESHED → actualizamos el session.
+      // USER_UPDATED → también refrescamos currentUser.
+      if (event === 'SIGNED_OUT' || !nextSession) {
         setState({ status: 'unauthenticated', session: null, currentUser: null });
         return;
       }
+
+      // Para TOKEN_REFRESHED / SIGNED_IN / USER_UPDATED:
       const user = await fetchCurrentUser(nextSession.access_token);
       if (!cancelled) {
         setState({ status: 'authenticated', session: nextSession, currentUser: user });

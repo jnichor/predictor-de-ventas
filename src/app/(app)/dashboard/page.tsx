@@ -22,15 +22,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { SalesTrendChart } from '@/components/charts/sales-trend-chart';
+import { VibrantKpiCard } from '@/components/charts/vibrant-kpi-card';
 import { EmptyState } from '@/components/empty-state';
+import { OnboardingBanner } from '@/components/onboarding-banner';
 import { useAuth } from '@/hooks/use-auth';
 import { useDashboardData, type Period } from '@/hooks/use-dashboard-data';
 import { money } from '@/lib/utils';
 
 export default function DashboardPage() {
-  const { session } = useAuth();
+  const { session, currentUser } = useAuth();
   const accessToken = session?.access_token ?? null;
-  const { products, sales, reports, forecast, isLoading, period, setPeriod } =
+  const { products, sales, movements, reports, forecast, isLoading, period, setPeriod } =
     useDashboardData(accessToken);
 
   const trendPoints = useMemo(() => reports?.salesByPeriod ?? [], [reports]);
@@ -101,29 +103,65 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* KPIs */}
+      {/* Onboarding — solo visible para admin con estado incompleto */}
+      {currentUser?.role === 'admin' && !isLoading ? (
+        <OnboardingBanner
+          hasProducts={products.length > 0}
+          hasStock={products.some((p) => p.currentStock > 0) || movements.length > 0}
+          hasSales={sales.length > 0}
+        />
+      ) : null}
+
+      {/* KPIs — estilo dashboard vibrante */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard
-          label="Ventas hoy"
-          value={isLoading ? null : money(salesToday)}
-          icon={<TrendingUp className="size-4" />}
-        />
-        <KpiCard
-          label="Stock total"
-          value={isLoading ? null : `${totalStock} u`}
-          icon={<Boxes className="size-4" />}
-        />
-        <KpiCard
-          label="Valor inventario"
-          value={isLoading ? null : money(inventoryValue)}
-          icon={<PackageCheck className="size-4" />}
-        />
-        <KpiCard
-          label="Alertas de stock"
-          value={isLoading ? null : `${lowStockProducts.length}`}
-          icon={<TriangleAlert className="size-4" />}
-          intent={lowStockProducts.length > 0 ? 'warning' : 'default'}
-        />
+        {isLoading ? (
+          <>
+            <Skeleton className="h-32 rounded-xl" />
+            <Skeleton className="h-32 rounded-xl" />
+            <Skeleton className="h-32 rounded-xl" />
+            <Skeleton className="h-32 rounded-xl" />
+          </>
+        ) : (
+          <>
+            <VibrantKpiCard
+              label="Ventas hoy"
+              value={money(salesToday)}
+              icon={<TrendingUp className="size-4" />}
+              variant="pink"
+              progress={Math.min(100, (salesToday / Math.max(salesToday + 1, 1)) * 100)}
+              progressLabel="del día"
+            />
+            <VibrantKpiCard
+              label="Stock total"
+              value={`${totalStock} u`}
+              icon={<Boxes className="size-4" />}
+              variant="emerald"
+              progress={lowStockProducts.length > 0 && products.length > 0
+                ? Math.max(
+                    0,
+                    100 - (lowStockProducts.length / products.length) * 100,
+                  )
+                : 100}
+              progressLabel="saludable"
+            />
+            <VibrantKpiCard
+              label="Valor inventario"
+              value={money(inventoryValue)}
+              icon={<PackageCheck className="size-4" />}
+              variant="purple"
+            />
+            <VibrantKpiCard
+              label="Alertas stock"
+              value={`${lowStockProducts.length}`}
+              icon={<TriangleAlert className="size-4" />}
+              variant={lowStockProducts.length > 0 ? 'amber' : 'sky'}
+              progress={products.length > 0
+                ? (lowStockProducts.length / products.length) * 100
+                : 0}
+              progressLabel="crítico"
+            />
+          </>
+        )}
       </div>
 
       {/* Chart + alerts */}
@@ -243,8 +281,8 @@ export default function DashboardPage() {
                 <CardDescription>Productos a reabastecer</CardDescription>
               </div>
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/inventario">
-                  Ver todo
+                <Link href="/prediccion">
+                  Ver análisis
                   <ArrowRight className="ml-1 size-3" />
                 </Link>
               </Button>
@@ -294,43 +332,4 @@ export default function DashboardPage() {
   );
 }
 
-function KpiCard({
-  label,
-  value,
-  icon,
-  intent = 'default',
-}: {
-  label: string;
-  value: string | null;
-  icon: React.ReactNode;
-  intent?: 'default' | 'warning';
-}) {
-  return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            {label}
-          </span>
-          <span
-            className={
-              intent === 'warning'
-                ? 'flex size-8 items-center justify-center rounded-md bg-destructive/10 text-destructive'
-                : 'flex size-8 items-center justify-center rounded-md bg-primary/10 text-primary'
-            }
-          >
-            {icon}
-          </span>
-        </div>
-        <div className="mt-2">
-          {value === null ? (
-            <Skeleton className="h-8 w-24" />
-          ) : (
-            <p className="text-2xl font-semibold tabular-nums">{value}</p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 

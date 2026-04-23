@@ -24,6 +24,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { ProductCombobox } from '@/components/products/product-combobox';
+import { SaleReceipt, type ReceiptData } from '@/components/sales/sale-receipt';
 import { saleFormSchema, type SaleFormValues } from '@/lib/form-schemas';
 import type { Product } from '@/lib/types';
 import { money } from '@/lib/utils';
@@ -69,6 +70,10 @@ export function SaleForm({
   // Se auto-completa cuando el código matchea un producto existente,
   // y el user puede escribirlo manualmente si el código es nuevo.
   const [productName, setProductName] = useState('');
+
+  // Último recibo generado — se muestra en dialog imprimible
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [receiptOpen, setReceiptOpen] = useState(false);
   useEffect(() => {
     if (selectedProduct) {
       setProductName(selectedProduct.name);
@@ -106,7 +111,28 @@ export function SaleForm({
         return;
       }
 
+      const responseData = await response.json().catch(() => null);
+      const sale = responseData?.sale;
+
       toast.success('Venta registrada y stock actualizado.');
+
+      // Preparar ticket imprimible con la data de la venta recién creada
+      if (sale) {
+        const product = products.find((p) => p.barcode === values.barcode);
+        setReceipt({
+          id: sale.id,
+          productName: product?.name ?? trimmedName ?? 'Producto',
+          productBarcode: values.barcode,
+          quantity: sale.quantity,
+          unitPrice: sale.unitPrice,
+          discount: sale.discount,
+          total: sale.total,
+          channel: sale.channel,
+          soldAt: sale.soldAt,
+        });
+        setReceiptOpen(true);
+      }
+
       form.reset({ barcode: '', quantity: 1, discount: 0, channel: 'Mostrador' });
       setProductName('');
       onBarcodeChange('');
@@ -256,6 +282,8 @@ export function SaleForm({
           )}
         </Button>
       </form>
+
+      <SaleReceipt open={receiptOpen} onOpenChange={setReceiptOpen} data={receipt} />
     </Form>
   );
 }

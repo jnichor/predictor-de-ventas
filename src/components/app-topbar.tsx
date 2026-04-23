@@ -28,7 +28,7 @@ export function AppTopbar({
     currentUser?.role === 'admin' ? 'Administrador' : currentUser?.role === 'worker' ? 'Worker' : '—';
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b bg-background px-4">
+    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-border/50 bg-background/60 backdrop-blur-md px-4">
       <SidebarTrigger />
       <Separator orientation="vertical" className="h-6" />
       <button

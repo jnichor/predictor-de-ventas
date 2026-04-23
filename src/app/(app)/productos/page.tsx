@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
+import { FacetedFilter } from '@/components/ui/faceted-filter';
 import { ProductForm } from '@/components/products/product-form';
 import { buildProductsColumns } from '@/components/products/products-columns';
 import { useAuth } from '@/hooks/use-auth';
@@ -45,6 +46,8 @@ export default function ProductosPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [sheet, setSheet] = useState<SheetState>(null);
   const [deactivateTarget, setDeactivateTarget] = useState<Product | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
 
   useEffect(() => {
     if (status === 'authenticated' && currentUser?.role !== 'admin') {
@@ -103,6 +106,23 @@ export default function ProductosPage() {
       }),
     [],
   );
+
+  const categoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of products) set.add(p.category);
+    return Array.from(set).map((c) => ({ label: c, value: c }));
+  }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      if (selectedCategories.length > 0 && !selectedCategories.includes(p.category)) return false;
+      if (selectedStatus.length > 0) {
+        const status = !p.active ? 'inactive' : p.currentStock <= p.minStock ? 'low' : 'ok';
+        if (!selectedStatus.includes(status)) return false;
+      }
+      return true;
+    });
+  }, [products, selectedCategories, selectedStatus]);
 
   if (!accessToken || currentUser?.role !== 'admin') return null;
 
@@ -240,16 +260,52 @@ export default function ProductosPage() {
         <CardContent>
           <DataTable
             columns={columns}
-            data={products}
+            data={filteredProducts}
             isLoading={isLoading}
             globalFilterPlaceholder="Buscar por nombre, barcode o categoría"
             emptyTitle={products.length === 0 ? 'Todavía no hay productos' : 'Sin coincidencias'}
             emptyDescription={
               products.length === 0
                 ? 'Creá el primero con "Nuevo producto".'
-                : 'Ajustá el criterio de búsqueda.'
+                : 'Ajustá el criterio de búsqueda o filtros.'
             }
             pageSize={10}
+            toolbar={
+              <>
+                {categoryOptions.length > 0 ? (
+                  <FacetedFilter
+                    title="Categoría"
+                    options={categoryOptions}
+                    selected={selectedCategories}
+                    onChange={setSelectedCategories}
+                  />
+                ) : null}
+                <FacetedFilter
+                  title="Estado"
+                  options={[
+                    { label: 'En stock', value: 'ok' },
+                    { label: 'Stock bajo', value: 'low' },
+                    { label: 'Inactivo', value: 'inactive' },
+                  ]}
+                  selected={selectedStatus}
+                  onChange={setSelectedStatus}
+                />
+              </>
+            }
+            csv={{
+              filename: `productos-${new Date().toISOString().slice(0, 10)}`,
+              columns: [
+                { header: 'Nombre', accessor: (r) => r.name },
+                { header: 'Barcode', accessor: (r) => r.barcode },
+                { header: 'Categoría', accessor: (r) => r.category },
+                { header: 'Descripción', accessor: (r) => r.description },
+                { header: 'Precio unitario', accessor: (r) => r.unitPrice },
+                { header: 'Stock actual', accessor: (r) => r.currentStock },
+                { header: 'Stock mínimo', accessor: (r) => r.minStock },
+                { header: 'Activo', accessor: (r) => (r.active ? 'Sí' : 'No') },
+                { header: 'Creado', accessor: (r) => new Date(r.createdAt).toLocaleDateString('es-PE') },
+              ],
+            }}
           />
         </CardContent>
       </Card>
