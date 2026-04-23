@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
 import { Loader2, ReceiptText } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -13,6 +14,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { saleFormSchema, type SaleFormValues } from '@/lib/form-schemas';
 
 type SaleFormProps = {
   accessToken: string;
@@ -22,27 +32,22 @@ type SaleFormProps = {
 };
 
 export function SaleForm({ accessToken, barcode, onBarcodeChange, onSaleCreated }: SaleFormProps) {
-  const [quantity, setQuantity] = useState('1');
-  const [discount, setDiscount] = useState('0');
-  const [channel, setChannel] = useState('Mostrador');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const form = useForm<SaleFormValues>({
+    resolver: zodResolver(saleFormSchema),
+    defaultValues: {
+      barcode: barcode,
+      quantity: 1,
+      discount: 0,
+      channel: 'Mostrador',
+    },
+  });
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  // Sincroniza el barcode externo (scanner) con el campo del form
+  useEffect(() => {
+    form.setValue('barcode', barcode, { shouldValidate: false });
+  }, [barcode, form]);
 
-    if (!barcode.trim()) {
-      toast.error('Falta el código de barras del producto.');
-      return;
-    }
-
-    const q = Number(quantity);
-    const d = Number(discount);
-    if (!Number.isFinite(q) || q <= 0) {
-      toast.error('La cantidad debe ser mayor a cero.');
-      return;
-    }
-
-    setIsSubmitting(true);
+  async function onSubmit(values: SaleFormValues) {
     try {
       const response = await fetch('/api/sales', {
         method: 'POST',
@@ -50,12 +55,7 @@ export function SaleForm({ accessToken, barcode, onBarcodeChange, onSaleCreated 
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
-          barcode: barcode.trim(),
-          quantity: q,
-          discount: Number.isFinite(d) ? d : 0,
-          channel,
-        }),
+        body: JSON.stringify(values),
       });
 
       if (!response.ok) {
@@ -65,86 +65,122 @@ export function SaleForm({ accessToken, barcode, onBarcodeChange, onSaleCreated 
       }
 
       toast.success('Venta registrada y stock actualizado.');
+      form.reset({ barcode: '', quantity: 1, discount: 0, channel: 'Mostrador' });
       onBarcodeChange('');
-      setQuantity('1');
-      setDiscount('0');
-      setChannel('Mostrador');
       await onSaleCreated?.();
     } catch (error) {
       console.error('sale submit', error);
       toast.error('Error de conexión al registrar la venta.');
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="barcode">Código o nombre del producto</Label>
-        <Input
-          id="barcode"
-          value={barcode}
-          onChange={(event) => onBarcodeChange(event.target.value)}
-          placeholder="7751234567890"
-          autoComplete="off"
-          className="font-mono tabular-nums"
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="barcode"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Código o nombre del producto</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="7751234567890"
+                  autoComplete="off"
+                  className="font-mono tabular-nums"
+                  {...field}
+                  onChange={(e) => {
+                    field.onChange(e);
+                    onBarcodeChange(e.target.value);
+                  }}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <Label htmlFor="quantity">Cantidad</Label>
-          <Input
-            id="quantity"
-            type="number"
-            min="1"
-            value={quantity}
-            onChange={(event) => setQuantity(event.target.value)}
-            className="tabular-nums"
+        <div className="grid grid-cols-2 gap-3">
+          <FormField
+            control={form.control}
+            name="quantity"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Cantidad</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min="1"
+                    className="tabular-nums"
+                    {...field}
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(e.target.value)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="discount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Descuento</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="tabular-nums"
+                    {...field}
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(e.target.value)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="discount">Descuento</Label>
-          <Input
-            id="discount"
-            type="number"
-            step="0.01"
-            min="0"
-            value={discount}
-            onChange={(event) => setDiscount(event.target.value)}
-            className="tabular-nums"
-          />
-        </div>
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="channel">Canal</Label>
-        <Select value={channel} onValueChange={setChannel}>
-          <SelectTrigger id="channel">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Mostrador">Mostrador</SelectItem>
-            <SelectItem value="Delivery">Delivery</SelectItem>
-            <SelectItem value="Online">Online</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+        <FormField
+          control={form.control}
+          name="channel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Canal</FormLabel>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="Mostrador">Mostrador</SelectItem>
+                  <SelectItem value="Delivery">Delivery</SelectItem>
+                  <SelectItem value="Online">Online</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? (
-          <>
-            <Loader2 className="mr-2 size-4 animate-spin" />
-            Registrando...
-          </>
-        ) : (
-          <>
-            <ReceiptText className="mr-2 size-4" />
-            Registrar venta
-          </>
-        )}
-      </Button>
-    </form>
+        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+          {form.formState.isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 size-4 animate-spin" />
+              Registrando...
+            </>
+          ) : (
+            <>
+              <ReceiptText className="mr-2 size-4" />
+              Registrar venta
+            </>
+          )}
+        </Button>
+      </form>
+    </Form>
   );
 }

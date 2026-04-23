@@ -1,49 +1,44 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
 import { Loader2, PackageOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { productFormSchema, type ProductFormValues } from '@/lib/form-schemas';
 
 type ProductFormProps = {
   accessToken: string;
   onProductCreated?: () => void | Promise<void>;
 };
 
-const empty = {
+const defaults: ProductFormValues = {
   barcode: '',
   name: '',
-  description: '',
   category: '',
-  unitPrice: '',
-  currentStock: '',
-  minStock: '',
+  description: '',
+  unitPrice: 0,
+  currentStock: 0,
+  minStock: 0,
 };
 
 export function ProductForm({ accessToken, onProductCreated }: ProductFormProps) {
-  const [form, setForm] = useState(empty);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const form = useForm<ProductFormValues>({
+    resolver: zodResolver(productFormSchema),
+    defaultValues: defaults,
+  });
 
-  function update<K extends keyof typeof empty>(key: K, value: string) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!form.barcode.trim() || !form.name.trim()) {
-      toast.error('Falta completar nombre y código.');
-      return;
-    }
-
-    const unitPrice = Number(form.unitPrice);
-    const currentStock = Number(form.currentStock);
-    const minStock = Number(form.minStock);
-
-    setIsSubmitting(true);
+  async function onSubmit(values: ProductFormValues) {
     try {
       const response = await fetch('/api/products', {
         method: 'POST',
@@ -52,13 +47,13 @@ export function ProductForm({ accessToken, onProductCreated }: ProductFormProps)
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          barcode: form.barcode.trim(),
-          name: form.name.trim(),
-          description: form.description.trim(),
-          category: form.category.trim() || 'General',
-          unit_price: Number.isFinite(unitPrice) ? unitPrice : 0,
-          current_stock: Number.isFinite(currentStock) ? currentStock : 0,
-          min_stock: Number.isFinite(minStock) ? minStock : 0,
+          barcode: values.barcode,
+          name: values.name,
+          description: values.description ?? '',
+          category: values.category?.trim() || 'General',
+          unit_price: values.unitPrice,
+          current_stock: values.currentStock,
+          min_stock: values.minStock,
         }),
       });
 
@@ -69,117 +64,160 @@ export function ProductForm({ accessToken, onProductCreated }: ProductFormProps)
       }
 
       toast.success('Producto creado correctamente.');
-      setForm(empty);
+      form.reset(defaults);
       await onProductCreated?.();
     } catch (error) {
       console.error('product submit', error);
       toast.error('Error de conexión al crear el producto.');
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="barcode">Código de barras</Label>
-        <Input
-          id="barcode"
-          value={form.barcode}
-          onChange={(e) => update('barcode', e.target.value)}
-          placeholder="775123..."
-          className="font-mono tabular-nums"
-          autoComplete="off"
-          required
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="barcode"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Código de barras</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="775123..."
+                  className="font-mono tabular-nums"
+                  autoComplete="off"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="name">Nombre</Label>
-        <Input
-          id="name"
-          value={form.name}
-          onChange={(e) => update('name', e.target.value)}
-          placeholder="Arroz 1kg"
-          required
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Nombre</FormLabel>
+              <FormControl>
+                <Input placeholder="Arroz 1kg" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="category">Categoría</Label>
-        <Input
-          id="category"
-          value={form.category}
-          onChange={(e) => update('category', e.target.value)}
-          placeholder="Abarrotes"
+        <FormField
+          control={form.control}
+          name="category"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Categoría</FormLabel>
+              <FormControl>
+                <Input placeholder="Abarrotes (opcional)" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <Label htmlFor="unit-price">Precio unitario</Label>
-          <Input
-            id="unit-price"
-            type="number"
-            step="0.01"
-            min="0"
-            value={form.unitPrice}
-            onChange={(e) => update('unitPrice', e.target.value)}
-            placeholder="0.00"
-            className="tabular-nums"
+        <div className="grid grid-cols-2 gap-3">
+          <FormField
+            control={form.control}
+            name="unitPrice"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Precio unitario</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    className="tabular-nums"
+                    {...field}
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(e.target.value)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="currentStock"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Stock inicial</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    className="tabular-nums"
+                    {...field}
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(e.target.value)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="current-stock">Stock inicial</Label>
-          <Input
-            id="current-stock"
-            type="number"
-            min="0"
-            value={form.currentStock}
-            onChange={(e) => update('currentStock', e.target.value)}
-            placeholder="0"
-            className="tabular-nums"
-          />
-        </div>
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="min-stock">Stock mínimo (alerta)</Label>
-        <Input
-          id="min-stock"
-          type="number"
-          min="0"
-          value={form.minStock}
-          onChange={(e) => update('minStock', e.target.value)}
-          placeholder="0"
-          className="tabular-nums"
+        <FormField
+          control={form.control}
+          name="minStock"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Stock mínimo (alerta)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  className="tabular-nums"
+                  {...field}
+                  value={field.value ?? ''}
+                  onChange={(e) => field.onChange(e.target.value)}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="description">Descripción</Label>
-        <Textarea
-          id="description"
-          value={form.description}
-          onChange={(e) => update('description', e.target.value)}
-          rows={3}
-          placeholder="Detalle opcional del producto"
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Descripción</FormLabel>
+              <FormControl>
+                <Textarea rows={3} placeholder="Detalle opcional del producto" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? (
-          <>
-            <Loader2 className="mr-2 size-4 animate-spin" />
-            Guardando...
-          </>
-        ) : (
-          <>
-            <PackageOpen className="mr-2 size-4" />
-            Guardar producto
-          </>
-        )}
-      </Button>
-    </form>
+        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+          {form.formState.isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 size-4 animate-spin" />
+              Guardando...
+            </>
+          ) : (
+            <>
+              <PackageOpen className="mr-2 size-4" />
+              Guardar producto
+            </>
+          )}
+        </Button>
+      </form>
+    </Form>
   );
 }

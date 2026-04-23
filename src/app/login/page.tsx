@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
 import { Loader2, Store } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase/client';
+import { loginFormSchema, type LoginFormValues } from '@/lib/form-schemas';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -15,14 +18,23 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
+
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginFormSchema),
+    defaultValues: { email: '', password: '' },
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -46,16 +58,13 @@ export default function LoginPage() {
     };
   }, [router]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function onSubmit(values: LoginFormValues) {
     if (!supabase) {
       toast.error('Falta configurar Supabase.');
       return;
     }
 
-    setIsSubmitting(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setIsSubmitting(false);
+    const { error } = await supabase.auth.signInWithPassword(values);
 
     if (error) {
       toast.error(error.message);
@@ -84,49 +93,63 @@ export default function LoginPage() {
           <CardTitle className="text-2xl">Sistema de tienda</CardTitle>
           <CardDescription>Iniciá sesión para acceder al panel</CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Correo</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="trabajador@tienda.com"
-                autoComplete="email"
-                required
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Correo</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="trabajador@tienda.com"
+                        autoComplete="email"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                required
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contraseña</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="••••••••"
+                        autoComplete="current-password"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-3">
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                  Ingresando...
-                </>
-              ) : (
-                'Entrar'
-              )}
-            </Button>
-            <p className="text-center text-xs text-muted-foreground">
-              ¿Sos nuevo en el equipo? Pedile al administrador que te envíe una invitación por email.
-            </p>
-          </CardFooter>
-        </form>
+            </CardContent>
+            <CardFooter className="flex flex-col gap-3">
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    Ingresando...
+                  </>
+                ) : (
+                  'Entrar'
+                )}
+              </Button>
+              <p className="text-center text-xs text-muted-foreground">
+                ¿Sos nuevo en el equipo? Pedile al administrador que te envíe una invitación por email.
+              </p>
+            </CardFooter>
+          </form>
+        </Form>
       </Card>
     </div>
   );

@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
 import { Loader2, PackagePlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -14,10 +14,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { movementFormSchema, type MovementFormValues } from '@/lib/form-schemas';
 import type { Product } from '@/lib/types';
-
-type MovementType = 'entry' | 'exit' | 'adjustment';
-type AdjustmentDirection = 'increase' | 'decrease';
 
 type MovementFormProps = {
   accessToken: string;
@@ -32,41 +38,38 @@ export function MovementForm({
   isAdmin,
   onMovementCreated,
 }: MovementFormProps) {
-  const [barcodeOrName, setBarcodeOrName] = useState('');
-  const [type, setType] = useState<MovementType>('entry');
-  const [adjustmentDirection, setAdjustmentDirection] = useState<AdjustmentDirection>('increase');
-  const [quantity, setQuantity] = useState('1');
-  const [reason, setReason] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const form = useForm<MovementFormValues>({
+    resolver: zodResolver(movementFormSchema),
+    defaultValues: {
+      barcodeOrName: '',
+      type: 'entry',
+      quantity: 1,
+      reason: '',
+      adjustmentDirection: 'increase',
+    },
+  });
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const type = form.watch('type');
 
-    const query = barcodeOrName.trim();
-    if (!query) {
-      toast.error('Falta el código o nombre del producto.');
-      return;
-    }
-
+  async function onSubmit(values: MovementFormValues) {
+    const query = values.barcodeOrName.trim();
     const product = products.find((p) => p.barcode === query || p.name === query);
+
     if (!product) {
-      toast.error('No se encontró el producto.');
+      form.setError('barcodeOrName', { message: 'No se encontró el producto.' });
       return;
     }
 
-    const q = Number(quantity);
-    if (!Number.isFinite(q) || q <= 0) {
-      toast.error('La cantidad debe ser mayor a cero.');
+    const willDecrease =
+      values.type === 'exit' ||
+      (values.type === 'adjustment' && values.adjustmentDirection === 'decrease');
+    if (willDecrease && values.quantity > product.currentStock) {
+      form.setError('quantity', {
+        message: `Solo hay ${product.currentStock} unidades en stock.`,
+      });
       return;
     }
 
-    const willDecrease = type === 'exit' || (type === 'adjustment' && adjustmentDirection === 'decrease');
-    if (willDecrease && q > product.currentStock) {
-      toast.error(`Solo hay ${product.currentStock} unidades en stock.`);
-      return;
-    }
-
-    setIsSubmitting(true);
     try {
       const response = await fetch('/api/inventory/movements', {
         method: 'POST',
@@ -76,10 +79,10 @@ export function MovementForm({
         },
         body: JSON.stringify({
           product_id: product.id,
-          type,
-          quantity: q,
-          reason: reason.trim() || 'Movimiento de inventario',
-          adjustment_direction: type === 'adjustment' ? adjustmentDirection : null,
+          type: values.type,
+          quantity: values.quantity,
+          reason: values.reason?.trim() || 'Movimiento de inventario',
+          adjustment_direction: values.type === 'adjustment' ? values.adjustmentDirection : null,
         }),
       });
 
@@ -90,102 +93,144 @@ export function MovementForm({
       }
 
       toast.success('Movimiento de inventario registrado.');
-      setBarcodeOrName('');
-      setQuantity('1');
-      setReason('');
+      form.reset({
+        barcodeOrName: '',
+        type: 'entry',
+        quantity: 1,
+        reason: '',
+        adjustmentDirection: 'increase',
+      });
       await onMovementCreated?.();
     } catch (error) {
       console.error('movement submit', error);
       toast.error('Error de conexión al registrar el movimiento.');
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="barcode">Código o nombre del producto</Label>
-        <Input
-          id="barcode"
-          value={barcodeOrName}
-          onChange={(event) => setBarcodeOrName(event.target.value)}
-          placeholder="7751234567890 o Arroz 1kg"
-          autoComplete="off"
-          className="font-mono tabular-nums"
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="barcodeOrName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Código o nombre del producto</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="7751234567890 o Arroz 1kg"
+                  autoComplete="off"
+                  className="font-mono tabular-nums"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="type">Tipo de movimiento</Label>
-          <Select value={type} onValueChange={(v) => setType(v as MovementType)}>
-            <SelectTrigger id="type">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="entry">Entrada (recepción)</SelectItem>
-              <SelectItem value="exit">Salida (merma, devolución)</SelectItem>
-              {isAdmin ? <SelectItem value="adjustment">Ajuste (solo admin)</SelectItem> : null}
-            </SelectContent>
-          </Select>
-        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="type"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tipo de movimiento</FormLabel>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="entry">Entrada (recepción)</SelectItem>
+                    <SelectItem value="exit">Salida (merma, devolución)</SelectItem>
+                    {isAdmin ? <SelectItem value="adjustment">Ajuste (solo admin)</SelectItem> : null}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <div className="space-y-2">
-          <Label htmlFor="quantity">Cantidad</Label>
-          <Input
-            id="quantity"
-            type="number"
-            min="1"
-            value={quantity}
-            onChange={(event) => setQuantity(event.target.value)}
-            className="tabular-nums"
+          <FormField
+            control={form.control}
+            name="quantity"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Cantidad</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min="1"
+                    className="tabular-nums"
+                    {...field}
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(e.target.value)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         </div>
-      </div>
 
-      {type === 'adjustment' ? (
-        <div className="space-y-2">
-          <Label htmlFor="direction">Dirección del ajuste</Label>
-          <Select
-            value={adjustmentDirection}
-            onValueChange={(v) => setAdjustmentDirection(v as AdjustmentDirection)}
-          >
-            <SelectTrigger id="direction">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="increase">Aumentar stock</SelectItem>
-              <SelectItem value="decrease">Disminuir stock</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      ) : null}
+        {type === 'adjustment' ? (
+          <FormField
+            control={form.control}
+            name="adjustmentDirection"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Dirección del ajuste</FormLabel>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="increase">Aumentar stock</SelectItem>
+                    <SelectItem value="decrease">Disminuir stock</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        ) : null}
 
-      <div className="space-y-2">
-        <Label htmlFor="reason">Motivo</Label>
-        <Textarea
-          id="reason"
-          value={reason}
-          onChange={(event) => setReason(event.target.value)}
-          rows={3}
-          placeholder="Ingreso de mercadería, conteo físico, merma por vencimiento..."
+        <FormField
+          control={form.control}
+          name="reason"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Motivo</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  placeholder="Ingreso de mercadería, conteo físico, merma por vencimiento..."
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? (
-          <>
-            <Loader2 className="mr-2 size-4 animate-spin" />
-            Registrando...
-          </>
-        ) : (
-          <>
-            <PackagePlus className="mr-2 size-4" />
-            Registrar movimiento
-          </>
-        )}
-      </Button>
-    </form>
+        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+          {form.formState.isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 size-4 animate-spin" />
+              Registrando...
+            </>
+          ) : (
+            <>
+              <PackagePlus className="mr-2 size-4" />
+              Registrar movimiento
+            </>
+          )}
+        </Button>
+      </form>
+    </Form>
   );
 }

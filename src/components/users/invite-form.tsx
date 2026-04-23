@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
 import { Loader2, MailPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -13,27 +13,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { inviteFormSchema, type InviteFormValues } from '@/lib/form-schemas';
 
 type InviteFormProps = {
   accessToken: string;
   onInvited?: () => void | Promise<void>;
 };
 
+const defaults: InviteFormValues = {
+  email: '',
+  name: '',
+  role: 'worker',
+};
+
 export function InviteForm({ accessToken, onInvited }: InviteFormProps) {
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [role, setRole] = useState<'worker' | 'admin'>('worker');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const form = useForm<InviteFormValues>({
+    resolver: zodResolver(inviteFormSchema),
+    defaultValues: defaults,
+  });
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!email.trim()) {
-      toast.error('Falta el email del invitado.');
-      return;
-    }
-
-    setIsSubmitting(true);
+  async function onSubmit(values: InviteFormValues) {
     try {
       const response = await fetch('/api/admin/users/invite', {
         method: 'POST',
@@ -42,9 +50,9 @@ export function InviteForm({ accessToken, onInvited }: InviteFormProps) {
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          email: email.trim(),
-          name: name.trim() || undefined,
-          role,
+          email: values.email,
+          name: values.name?.trim() || undefined,
+          role: values.role,
         }),
       });
 
@@ -54,73 +62,90 @@ export function InviteForm({ accessToken, onInvited }: InviteFormProps) {
         return;
       }
 
-      toast.success(`Invitación enviada a ${email.trim()}.`);
-      setEmail('');
-      setName('');
-      setRole('worker');
+      toast.success(`Invitación enviada a ${values.email}.`);
+      form.reset(defaults);
       await onInvited?.();
     } catch (error) {
       console.error('invite submit', error);
       toast.error('Error de conexión al enviar la invitación.');
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="email">Email del invitado</Label>
-        <Input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="nuevo@tienda.com"
-          autoComplete="off"
-          required
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email del invitado</FormLabel>
+              <FormControl>
+                <Input
+                  type="email"
+                  placeholder="nuevo@tienda.com"
+                  autoComplete="off"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="name">Nombre (opcional)</Label>
-        <Input
-          id="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Ana Pérez"
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Nombre (opcional)</FormLabel>
+              <FormControl>
+                <Input placeholder="Ana Pérez" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="role">Rol</Label>
-        <Select value={role} onValueChange={(v) => setRole(v as 'worker' | 'admin')}>
-          <SelectTrigger id="role">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="worker">Worker (ventas + inventario)</SelectItem>
-            <SelectItem value="admin">Admin (acceso completo)</SelectItem>
-          </SelectContent>
-        </Select>
-        <p className="text-xs text-muted-foreground">
-          Los admin pueden crear productos, hacer ajustes de inventario e invitar usuarios.
-        </p>
-      </div>
+        <FormField
+          control={form.control}
+          name="role"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Rol</FormLabel>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="worker">Worker (ventas + inventario)</SelectItem>
+                  <SelectItem value="admin">Admin (acceso completo)</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                Los admin pueden crear productos, hacer ajustes de inventario e invitar usuarios.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? (
-          <>
-            <Loader2 className="mr-2 size-4 animate-spin" />
-            Enviando...
-          </>
-        ) : (
-          <>
-            <MailPlus className="mr-2 size-4" />
-            Enviar invitación
-          </>
-        )}
-      </Button>
-    </form>
+        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+          {form.formState.isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 size-4 animate-spin" />
+              Enviando...
+            </>
+          ) : (
+            <>
+              <MailPlus className="mr-2 size-4" />
+              Enviar invitación
+            </>
+          )}
+        </Button>
+      </form>
+    </Form>
   );
 }
