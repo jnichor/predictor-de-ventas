@@ -37,9 +37,11 @@ export function useRealtimeTable({
   enabled = true,
 }: RealtimeTableOptions) {
   useEffect(() => {
-    if (!enabled || !supabase) return;
+    if (!enabled) return;
+    const client = supabase;
+    if (!client) return;
 
-    const channel = supabase
+    const channel = client
       .channel(`realtime:${schema}:${table}`)
       .on(
         'postgres_changes',
@@ -51,7 +53,7 @@ export function useRealtimeTable({
       .subscribe();
 
     return () => {
-      void supabase.removeChannel(channel);
+      void client.removeChannel(channel);
     };
   }, [table, schema, onChange, enabled]);
 }
