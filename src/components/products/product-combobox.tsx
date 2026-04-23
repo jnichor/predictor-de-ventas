@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, ChevronsUpDown, Package } from 'lucide-react';
+import { Check, ChevronsUpDown, Package, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,8 +31,17 @@ export function ProductCombobox({
   disabled,
 }: ProductComboboxProps) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
 
   const selected = products.find((p) => p.barcode === value);
+  const trimmedSearch = search.trim();
+  const searchMatchesExistingProduct = products.some(
+    (p) =>
+      p.barcode === trimmedSearch ||
+      p.name.toLowerCase() === trimmedSearch.toLowerCase(),
+  );
+  const canUseSearchAsNewCode =
+    trimmedSearch.length > 0 && !searchMatchesExistingProduct;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -70,9 +79,37 @@ export function ProductCombobox({
         align="start"
       >
         <Command>
-          <CommandInput placeholder="Buscar por nombre, barcode o categoría..." />
+          <CommandInput
+            placeholder="Buscar por nombre, barcode o categoría..."
+            value={search}
+            onValueChange={setSearch}
+          />
           <CommandList>
-            <CommandEmpty>Sin productos.</CommandEmpty>
+            <CommandEmpty>
+              {canUseSearchAsNewCode ? (
+                <div className="space-y-2 p-2 text-left">
+                  <p className="text-xs text-muted-foreground">
+                    No hay productos con &quot;{trimmedSearch}&quot;.
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      onChange(trimmedSearch, null);
+                      setSearch('');
+                      setOpen(false);
+                    }}
+                  >
+                    <Plus className="mr-2 size-4" />
+                    Usar &quot;{trimmedSearch}&quot; como código nuevo
+                  </Button>
+                </div>
+              ) : (
+                'Sin productos.'
+              )}
+            </CommandEmpty>
             <CommandGroup>
               {products.map((product) => {
                 const isLow = product.currentStock <= product.minStock;

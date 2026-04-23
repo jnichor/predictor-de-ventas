@@ -136,9 +136,14 @@ export function ProductForm({ accessToken, onProductCreated }: ProductFormProps)
                     min="0"
                     placeholder="0.00"
                     className="tabular-nums"
-                    {...field}
-                    value={field.value ?? ''}
-                    onChange={(e) => field.onChange(e.target.value)}
+                    name={field.name}
+                    ref={field.ref}
+                    onBlur={field.onBlur}
+                    value={field.value ?? 0}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      field.onChange(v === '' ? 0 : Number(v));
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
@@ -157,9 +162,14 @@ export function ProductForm({ accessToken, onProductCreated }: ProductFormProps)
                     min="0"
                     placeholder="0"
                     className="tabular-nums"
-                    {...field}
-                    value={field.value ?? ''}
-                    onChange={(e) => field.onChange(e.target.value)}
+                    name={field.name}
+                    ref={field.ref}
+                    onBlur={field.onBlur}
+                    value={field.value ?? 0}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      field.onChange(v === '' ? 0 : Number(v));
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
@@ -180,9 +190,14 @@ export function ProductForm({ accessToken, onProductCreated }: ProductFormProps)
                   min="0"
                   placeholder="0"
                   className="tabular-nums"
-                  {...field}
-                  value={field.value ?? ''}
-                  onChange={(e) => field.onChange(e.target.value)}
+                  name={field.name}
+                  ref={field.ref}
+                  onBlur={field.onBlur}
+                  value={field.value ?? 0}
+                  onChange={(e) => {
+                      const v = e.target.value;
+                      field.onChange(v === '' ? 0 : Number(v));
+                    }}
                 />
               </FormControl>
               <FormMessage />

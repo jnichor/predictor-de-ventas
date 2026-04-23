@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Loader2, ReceiptText } from 'lucide-react';
@@ -65,7 +65,28 @@ export function SaleForm({
     [products, currentBarcode],
   );
 
+  // Estado local del nombre del producto.
+  // Se auto-completa cuando el código matchea un producto existente,
+  // y el user puede escribirlo manualmente si el código es nuevo.
+  const [productName, setProductName] = useState('');
+  useEffect(() => {
+    if (selectedProduct) {
+      setProductName(selectedProduct.name);
+    } else if (!currentBarcode) {
+      setProductName('');
+    }
+  }, [selectedProduct, currentBarcode]);
+
   async function onSubmit(values: SaleFormValues) {
+    const trimmedName = productName.trim();
+
+    // Si el código no matchea un producto existente, el nombre es obligatorio
+    // para dar de alta el producto al vuelo.
+    if (!selectedProduct && !trimmedName) {
+      toast.error('Ingresá el nombre del producto para darlo de alta.');
+      return;
+    }
+
     try {
       const response = await fetch('/api/sales', {
         method: 'POST',
@@ -73,7 +94,10 @@ export function SaleForm({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify(values),
+        body: JSON.stringify({
+          ...values,
+          name: !selectedProduct && trimmedName ? trimmedName : undefined,
+        }),
       });
 
       if (!response.ok) {
@@ -84,6 +108,7 @@ export function SaleForm({
 
       toast.success('Venta registrada y stock actualizado.');
       form.reset({ barcode: '', quantity: 1, discount: 0, channel: 'Mostrador' });
+      setProductName('');
       onBarcodeChange('');
       await onSaleCreated?.();
     } catch (error) {
@@ -121,14 +146,18 @@ export function SaleForm({
           <Label htmlFor="product-name">Nombre del producto</Label>
           <Input
             id="product-name"
-            readOnly
-            tabIndex={-1}
-            value={selectedProduct?.name ?? ''}
-            placeholder="Se completa automáticamente con el código"
-            className="bg-muted/50 cursor-default"
+            value={productName}
+            onChange={(e) => setProductName(e.target.value)}
+            placeholder={
+              currentBarcode
+                ? 'Ingresá el nombre del producto nuevo'
+                : 'Se autocompleta cuando el código ya existe'
+            }
           />
           {currentBarcode && !selectedProduct ? (
-            <p className="text-xs text-destructive">Código no reconocido en el catálogo.</p>
+            <p className="text-xs text-muted-foreground">
+              Este código no está registrado. Escribí el nombre para darlo de alta al guardar.
+            </p>
           ) : selectedProduct ? (
             <p className="text-xs text-muted-foreground tabular-nums">
               Precio: {money(selectedProduct.unitPrice)} · Stock: {selectedProduct.currentStock} u
@@ -148,9 +177,14 @@ export function SaleForm({
                     type="number"
                     min="1"
                     className="tabular-nums"
-                    {...field}
-                    value={field.value ?? ''}
-                    onChange={(e) => field.onChange(e.target.value)}
+                    name={field.name}
+                    ref={field.ref}
+                    onBlur={field.onBlur}
+                    value={field.value ?? 0}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      field.onChange(v === '' ? 0 : Number(v));
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
@@ -169,9 +203,14 @@ export function SaleForm({
                     step="0.01"
                     min="0"
                     className="tabular-nums"
-                    {...field}
-                    value={field.value ?? ''}
-                    onChange={(e) => field.onChange(e.target.value)}
+                    name={field.name}
+                    ref={field.ref}
+                    onBlur={field.onBlur}
+                    value={field.value ?? 0}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      field.onChange(v === '' ? 0 : Number(v));
+                    }}
                   />
                 </FormControl>
                 <FormMessage />

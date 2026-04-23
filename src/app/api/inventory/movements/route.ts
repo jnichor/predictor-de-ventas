@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { adminSupabase } from '@/lib/supabase/server';
 import { mapMovement } from '@/lib/supabase/mappers';
 import { getRequestUser } from '@/lib/supabase/auth';
 import { createMovementSchema, parseJsonBody } from '@/lib/schemas';
@@ -40,8 +41,46 @@ export async function POST(request: Request) {
     );
   }
 
+  // Buscar el producto por barcode
+  let { data: product } = await auth.supabase
+    .from('products')
+    .select('id')
+    .eq('barcode', payload.barcode)
+    .maybeSingle();
+
+  // Alta al vuelo si no existe y vino un nombre.
+  // Usa adminSupabase porque la policy "products insert" exige rol admin.
+  if (!product && payload.name && adminSupabase) {
+    const { data: created, error: createError } = await adminSupabase
+      .from('products')
+      .insert({
+        barcode: payload.barcode,
+        name: payload.name,
+        description: '',
+        category: 'General',
+        unit_price: 0,
+        current_stock: 0,
+        min_stock: 0,
+        active: true,
+      })
+      .select('id')
+      .single();
+
+    if (createError || !created) {
+      return NextResponse.json(
+        { error: createError?.message ?? 'No se pudo crear el producto' },
+        { status: 500 },
+      );
+    }
+    product = created;
+  }
+
+  if (!product) {
+    return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
+  }
+
   const { data, error } = await auth.supabase.rpc('record_inventory_movement', {
-    p_product_id: payload.product_id,
+    p_product_id: product.id,
     p_type: payload.type,
     p_quantity: payload.quantity,
     p_reason: payload.reason,

@@ -19,6 +19,8 @@ export const createSaleSchema = z.object({
   quantity: z.number().int().positive('La cantidad debe ser mayor a cero'),
   discount: z.number().nonnegative().default(0),
   channel: z.string().trim().min(1).max(50).default('Mostrador'),
+  // Para alta al vuelo cuando el barcode no está registrado.
+  name: z.string().trim().min(1).max(200).optional(),
 });
 
 export const movementTypeSchema = z.enum(['entry', 'exit', 'adjustment']);
@@ -35,7 +37,10 @@ export const inviteUserSchema = z.object({
 
 export const createMovementSchema = z
   .object({
-    product_id: z.string().uuid('product_id debe ser un UUID válido'),
+    // Identificamos al producto por barcode (el cliente lo conoce desde el combobox).
+    // Para alta al vuelo cuando el barcode no está registrado, se acepta `name`.
+    barcode: z.string().trim().min(1, 'Código requerido'),
+    name: z.string().trim().min(1).max(200).optional(),
     type: movementTypeSchema,
     quantity: z.number().int().positive('La cantidad debe ser mayor a cero'),
     reason: z.string().max(500).optional().default(''),

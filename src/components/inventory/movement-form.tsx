@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Loader2, PackagePlus } from 'lucide-react';
@@ -59,19 +59,33 @@ export function MovementForm({
     [products, currentBarcode],
   );
 
-  async function onSubmit(values: MovementFormValues) {
-    const query = values.barcodeOrName.trim();
-    const product = products.find((p) => p.barcode === query || p.name === query);
+  // Nombre editable con auto-fill cuando el código matchea
+  const [productName, setProductName] = useState('');
+  useEffect(() => {
+    if (selectedProduct) {
+      setProductName(selectedProduct.name);
+    } else if (!currentBarcode) {
+      setProductName('');
+    }
+  }, [selectedProduct, currentBarcode]);
 
-    if (!product) {
-      form.setError('barcodeOrName', { message: 'No se encontró el producto.' });
+  async function onSubmit(values: MovementFormValues) {
+    const barcode = values.barcodeOrName.trim();
+    const trimmedName = productName.trim();
+    const product = products.find((p) => p.barcode === barcode);
+
+    // Si no matcheó producto, necesitamos un nombre para alta al vuelo
+    if (!product && !trimmedName) {
+      form.setError('barcodeOrName', {
+        message: 'Ingresá el nombre del producto para darlo de alta.',
+      });
       return;
     }
 
     const willDecrease =
       values.type === 'exit' ||
       (values.type === 'adjustment' && values.adjustmentDirection === 'decrease');
-    if (willDecrease && values.quantity > product.currentStock) {
+    if (product && willDecrease && values.quantity > product.currentStock) {
       form.setError('quantity', {
         message: `Solo hay ${product.currentStock} unidades en stock.`,
       });
@@ -86,7 +100,8 @@ export function MovementForm({
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          product_id: product.id,
+          barcode,
+          name: !product && trimmedName ? trimmedName : undefined,
           type: values.type,
           quantity: values.quantity,
           reason: values.reason?.trim() || 'Movimiento de inventario',
@@ -108,6 +123,7 @@ export function MovementForm({
         reason: '',
         adjustmentDirection: 'increase',
       });
+      setProductName('');
       await onMovementCreated?.();
     } catch (error) {
       console.error('movement submit', error);
@@ -141,14 +157,18 @@ export function MovementForm({
           <Label htmlFor="movement-product-name">Nombre del producto</Label>
           <Input
             id="movement-product-name"
-            readOnly
-            tabIndex={-1}
-            value={selectedProduct?.name ?? ''}
-            placeholder="Se completa automáticamente con el código"
-            className="bg-muted/50 cursor-default"
+            value={productName}
+            onChange={(e) => setProductName(e.target.value)}
+            placeholder={
+              currentBarcode
+                ? 'Ingresá el nombre del producto nuevo'
+                : 'Se autocompleta cuando el código ya existe'
+            }
           />
           {currentBarcode && !selectedProduct ? (
-            <p className="text-xs text-destructive">Código no reconocido en el catálogo.</p>
+            <p className="text-xs text-muted-foreground">
+              Este código no está registrado. Escribí el nombre para darlo de alta al guardar.
+            </p>
           ) : selectedProduct ? (
             <p className="text-xs text-muted-foreground tabular-nums">
               Stock actual: {selectedProduct.currentStock} u
@@ -191,9 +211,14 @@ export function MovementForm({
                     type="number"
                     min="1"
                     className="tabular-nums"
-                    {...field}
-                    value={field.value ?? ''}
-                    onChange={(e) => field.onChange(e.target.value)}
+                    name={field.name}
+                    ref={field.ref}
+                    onBlur={field.onBlur}
+                    value={field.value ?? 0}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      field.onChange(v === '' ? 0 : Number(v));
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
