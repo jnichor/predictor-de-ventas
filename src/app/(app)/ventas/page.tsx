@@ -1,8 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { History, ReceiptText, ScanLine } from 'lucide-react';
+import { HelpCircle, History, ReceiptText, ScanLine } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
 import { BarcodeScanner } from '@/components/barcode-scanner';
@@ -75,6 +81,58 @@ export default function VentasPage() {
           Escaneá un código o ingresalo a mano. El stock se descuenta automáticamente.
         </p>
       </div>
+
+      <Card>
+        <Accordion type="single" collapsible>
+          <AccordionItem value="help" className="border-0">
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center gap-2 text-sm">
+                <HelpCircle className="size-4 text-primary" />
+                <span className="font-medium">¿Cómo registrar una venta?</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-6">
+              <div className="space-y-4 text-sm leading-relaxed">
+                <p>
+                  Una <strong>venta</strong> descuenta stock automáticamente del producto.
+                  El sistema valida que haya stock suficiente antes de registrarla.
+                </p>
+
+                <div>
+                  <p className="mb-2 font-medium">Pasos:</p>
+                  <ol className="list-decimal space-y-1.5 pl-5 text-muted-foreground">
+                    <li>
+                      Clickeá el campo <strong className="text-foreground">Código del producto</strong>{' '}
+                      y buscá por nombre o barcode, o usá el{' '}
+                      <strong className="text-foreground">escáner de cámara</strong> de la izquierda.
+                    </li>
+                    <li>
+                      Si el código ya existe → el{' '}
+                      <strong className="text-foreground">nombre se autocompleta</strong> con
+                      precio y stock disponible.
+                    </li>
+                    <li>
+                      Si el código NO existe → podés escribir el nombre manualmente. El producto
+                      queda <strong className="text-foreground">creado al vuelo</strong> con stock
+                      0, pero la venta no se concreta porque no hay stock.
+                    </li>
+                    <li>
+                      Completá cantidad, descuento (opcional), canal (Mostrador / Delivery /
+                      Online) y <strong className="text-foreground">Registrar venta</strong>.
+                    </li>
+                  </ol>
+                </div>
+
+                <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-xs">
+                  <strong className="text-foreground">¿Producto sin stock?</strong> Andá a{' '}
+                  <strong>Inventario → Entrada</strong> y cargá cuánto tenés. Después volvé acá a
+                  vender.
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3">

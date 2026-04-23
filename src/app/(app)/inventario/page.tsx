@@ -1,7 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { History, PackagePlus } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, HelpCircle, History, PackagePlus, Wrench } from 'lucide-react';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
 import { MovementForm } from '@/components/inventory/movement-form';
@@ -72,6 +78,96 @@ export default function InventarioPage() {
           Entradas, salidas y ajustes de stock con trazabilidad por usuario.
         </p>
       </div>
+
+      <Card>
+        <Accordion type="single" collapsible>
+          <AccordionItem value="help" className="border-0">
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center gap-2 text-sm">
+                <HelpCircle className="size-4 text-primary" />
+                <span className="font-medium">¿Cómo funcionan los movimientos?</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-6">
+              <div className="space-y-4 text-sm leading-relaxed">
+                <p>
+                  Un <strong>movimiento</strong> es un evento que cambia el stock de un producto
+                  existente. No crea el producto — eso se hace una sola vez en{' '}
+                  <strong>Productos → Nuevo producto</strong>. Acá solo registrás lo que{' '}
+                  <em>pasó</em> con el stock.
+                </p>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-md border bg-card p-3">
+                    <div className="mb-1 flex items-center gap-2 font-medium">
+                      <ArrowUpRight className="size-4 text-primary" />
+                      Entrada
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Suma stock. Usalo cuando llega mercadería del proveedor.
+                    </p>
+                  </div>
+                  <div className="rounded-md border bg-card p-3">
+                    <div className="mb-1 flex items-center gap-2 font-medium">
+                      <ArrowDownRight className="size-4 text-muted-foreground" />
+                      Salida
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Resta stock fuera de venta. Usalo por roturas, vencimientos o devoluciones a
+                      proveedor.
+                    </p>
+                  </div>
+                  <div className="rounded-md border bg-card p-3">
+                    <div className="mb-1 flex items-center gap-2 font-medium">
+                      <Wrench className="size-4 text-muted-foreground" />
+                      Ajuste <span className="text-xs text-muted-foreground">(solo admin)</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Corrige el stock cuando el conteo físico no coincide con el sistema.
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-2 font-medium">Ejemplo de flujo típico en la tienda:</p>
+                  <ol className="list-decimal space-y-1.5 pl-5 text-muted-foreground">
+                    <li>
+                      El admin da de alta &quot;Arroz 1kg&quot; en{' '}
+                      <strong className="text-foreground">Productos</strong> con precio S/ 4.50 y
+                      stock 0.
+                    </li>
+                    <li>
+                      Llegó el camión con 50 bolsas → acá registrás{' '}
+                      <strong className="text-foreground">Entrada</strong> de 50. Stock: 50.
+                    </li>
+                    <li>
+                      Cliente compra 3 bolsas → se registra en{' '}
+                      <strong className="text-foreground">Ventas</strong> y el stock se descuenta
+                      solo. Stock: 47.
+                    </li>
+                    <li>
+                      Se rompen 2 bolsas → acá registrás{' '}
+                      <strong className="text-foreground">Salida</strong> de 2 con motivo
+                      &quot;Rotura&quot;. Stock: 45.
+                    </li>
+                    <li>
+                      El admin cuenta y hay 43, no 45 → acá registrás{' '}
+                      <strong className="text-foreground">Ajuste → Disminuir</strong> de 2. Stock:
+                      43.
+                    </li>
+                  </ol>
+                </div>
+
+                <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-xs">
+                  <strong className="text-foreground">Atajo útil:</strong> si escaneás un código que
+                  no está registrado y elegís <strong>Entrada</strong>, el sistema crea el producto
+                  al vuelo (solo con nombre) y le carga el stock de la entrada en un solo paso.
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-2">

@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PackageOpen, Plus } from 'lucide-react';
+import { HelpCircle, PackageOpen, Plus } from 'lucide-react';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Sheet,
@@ -95,6 +101,59 @@ export default function ProductosPage() {
           </SheetContent>
         </Sheet>
       </div>
+
+      <Card>
+        <Accordion type="single" collapsible>
+          <AccordionItem value="help" className="border-0">
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center gap-2 text-sm">
+                <HelpCircle className="size-4 text-primary" />
+                <span className="font-medium">¿Qué es un producto?</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-6">
+              <div className="space-y-4 text-sm leading-relaxed">
+                <p>
+                  Un <strong>producto</strong> es la ficha maestra del catálogo — define qué es el
+                  ítem (código, nombre, precio, categoría). Se crea una sola vez y queda
+                  permanente. No se confunde con un <strong>movimiento</strong>: el movimiento es
+                  un cambio de stock del producto.
+                </p>
+
+                <div>
+                  <p className="mb-2 font-medium">Campos clave al crear un producto:</p>
+                  <ul className="list-disc space-y-1.5 pl-5 text-muted-foreground">
+                    <li>
+                      <strong className="text-foreground">Código de barras</strong>: único. Es con
+                      lo que después vas a identificar el producto al escanear.
+                    </li>
+                    <li>
+                      <strong className="text-foreground">Precio unitario</strong>: el precio al
+                      que se vende por defecto. Se puede aplicar descuento al momento de la venta.
+                    </li>
+                    <li>
+                      <strong className="text-foreground">Stock inicial</strong>: cuánto hay al
+                      crearlo. Si ponés más de 0, se registra automáticamente un movimiento de
+                      entrada para trazabilidad.
+                    </li>
+                    <li>
+                      <strong className="text-foreground">Stock mínimo</strong>: umbral para alertas.
+                      Cuando el stock baja de este número, el producto aparece en &quot;Stock
+                      bajo&quot; del panel y en Reportes.
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-xs">
+                  <strong className="text-foreground">Alta al vuelo:</strong> también podés crear
+                  productos nuevos directamente desde <strong>Inventario → Entrada</strong>
+                  escaneando un código no registrado. Después completá el precio desde acá.
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </Card>
 
       <Card>
         <CardHeader>

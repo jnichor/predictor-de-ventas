@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { Loader2, PackagePlus } from 'lucide-react';
+import { Camera, Loader2, PackagePlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,13 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Form,
   FormControl,
   FormField,
@@ -25,6 +32,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { ProductCombobox } from '@/components/products/product-combobox';
+import { BarcodeScanner } from '@/components/barcode-scanner';
 import { movementFormSchema, type MovementFormValues } from '@/lib/form-schemas';
 import type { Product } from '@/lib/types';
 
@@ -32,6 +40,8 @@ type MovementFormProps = {
   accessToken: string;
   products: Product[];
   isAdmin: boolean;
+  barcode?: string;
+  onBarcodeChange?: (value: string) => void;
   onMovementCreated?: () => void | Promise<void>;
 };
 
@@ -39,6 +49,8 @@ export function MovementForm({
   accessToken,
   products,
   isAdmin,
+  barcode,
+  onBarcodeChange,
   onMovementCreated,
 }: MovementFormProps) {
   const form = useForm<MovementFormValues>({
@@ -58,6 +70,16 @@ export function MovementForm({
     () => products.find((p) => p.barcode === currentBarcode) ?? null,
     [products, currentBarcode],
   );
+
+  // Sincroniza el barcode externo (scanner) con el campo del form
+  useEffect(() => {
+    if (barcode !== undefined) {
+      form.setValue('barcodeOrName', barcode, { shouldValidate: false });
+    }
+  }, [barcode, form]);
+
+  // Estado del dialog del scanner
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   // Nombre editable con auto-fill cuando el código matchea
   const [productName, setProductName] = useState('');
@@ -124,6 +146,7 @@ export function MovementForm({
         adjustmentDirection: 'increase',
       });
       setProductName('');
+      onBarcodeChange?.('');
       await onMovementCreated?.();
     } catch (error) {
       console.error('movement submit', error);
@@ -140,18 +163,56 @@ export function MovementForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Código del producto</FormLabel>
-              <FormControl>
-                <ProductCombobox
-                  products={products}
-                  value={field.value}
-                  onChange={(value) => field.onChange(value)}
-                  placeholder="Escaneá o buscá por nombre / barcode..."
-                />
-              </FormControl>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <FormControl>
+                    <ProductCombobox
+                      products={products}
+                      value={field.value}
+                      onChange={(value) => {
+                        field.onChange(value);
+                        onBarcodeChange?.(value);
+                      }}
+                      placeholder="Escribí o buscá por nombre / barcode..."
+                    />
+                  </FormControl>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setScannerOpen(true)}
+                  aria-label="Escanear con cámara"
+                >
+                  <Camera className="size-4" />
+                </Button>
+              </div>
               <FormMessage />
             </FormItem>
           )}
         />
+
+        <Dialog open={scannerOpen} onOpenChange={setScannerOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Escanear código de barras</DialogTitle>
+              <DialogDescription>
+                Apuntá la cámara del dispositivo al código del producto.
+              </DialogDescription>
+            </DialogHeader>
+            <BarcodeScanner
+              onDetected={(value) => {
+                form.setValue('barcodeOrName', value, { shouldValidate: false });
+                onBarcodeChange?.(value);
+                const match = products.find((p) => p.barcode === value);
+                toast.success(
+                  match ? `Encontrado: ${match.name}` : `Código detectado: ${value}`,
+                );
+                setScannerOpen(false);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
 
         <div className="space-y-2">
           <Label htmlFor="movement-product-name">Nombre del producto</Label>
