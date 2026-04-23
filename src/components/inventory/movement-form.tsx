@@ -1,11 +1,13 @@
 'use client';
 
+import { useMemo } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Loader2, PackagePlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -51,6 +53,11 @@ export function MovementForm({
   });
 
   const type = form.watch('type');
+  const currentBarcode = form.watch('barcodeOrName');
+  const selectedProduct = useMemo(
+    () => products.find((p) => p.barcode === currentBarcode) ?? null,
+    [products, currentBarcode],
+  );
 
   async function onSubmit(values: MovementFormValues) {
     const query = values.barcodeOrName.trim();
@@ -116,19 +123,38 @@ export function MovementForm({
           name="barcodeOrName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Producto</FormLabel>
+              <FormLabel>Código del producto</FormLabel>
               <FormControl>
                 <ProductCombobox
                   products={products}
                   value={field.value}
                   onChange={(value) => field.onChange(value)}
-                  placeholder="Buscá por nombre o barcode..."
+                  placeholder="Escaneá o buscá por nombre / barcode..."
                 />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+
+        <div className="space-y-2">
+          <Label htmlFor="movement-product-name">Nombre del producto</Label>
+          <Input
+            id="movement-product-name"
+            readOnly
+            tabIndex={-1}
+            value={selectedProduct?.name ?? ''}
+            placeholder="Se completa automáticamente con el código"
+            className="bg-muted/50 cursor-default"
+          />
+          {currentBarcode && !selectedProduct ? (
+            <p className="text-xs text-destructive">Código no reconocido en el catálogo.</p>
+          ) : selectedProduct ? (
+            <p className="text-xs text-muted-foreground tabular-nums">
+              Stock actual: {selectedProduct.currentStock} u
+            </p>
+          ) : null}
+        </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <FormField

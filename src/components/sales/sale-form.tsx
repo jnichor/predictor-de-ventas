@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Loader2, ReceiptText } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -25,6 +26,7 @@ import {
 import { ProductCombobox } from '@/components/products/product-combobox';
 import { saleFormSchema, type SaleFormValues } from '@/lib/form-schemas';
 import type { Product } from '@/lib/types';
+import { money } from '@/lib/utils';
 
 type SaleFormProps = {
   accessToken: string;
@@ -55,6 +57,13 @@ export function SaleForm({
   useEffect(() => {
     form.setValue('barcode', barcode, { shouldValidate: false });
   }, [barcode, form]);
+
+  // Resuelve el producto matcheado por el código actual del form
+  const currentBarcode = form.watch('barcode');
+  const selectedProduct = useMemo(
+    () => products.find((p) => p.barcode === currentBarcode) ?? null,
+    [products, currentBarcode],
+  );
 
   async function onSubmit(values: SaleFormValues) {
     try {
@@ -91,7 +100,7 @@ export function SaleForm({
           name="barcode"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Producto</FormLabel>
+              <FormLabel>Código del producto</FormLabel>
               <FormControl>
                 <ProductCombobox
                   products={products}
@@ -100,13 +109,32 @@ export function SaleForm({
                     field.onChange(value);
                     onBarcodeChange(value);
                   }}
-                  placeholder="Buscá por nombre o barcode..."
+                  placeholder="Escaneá o buscá por nombre / barcode..."
                 />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+
+        <div className="space-y-2">
+          <Label htmlFor="product-name">Nombre del producto</Label>
+          <Input
+            id="product-name"
+            readOnly
+            tabIndex={-1}
+            value={selectedProduct?.name ?? ''}
+            placeholder="Se completa automáticamente con el código"
+            className="bg-muted/50 cursor-default"
+          />
+          {currentBarcode && !selectedProduct ? (
+            <p className="text-xs text-destructive">Código no reconocido en el catálogo.</p>
+          ) : selectedProduct ? (
+            <p className="text-xs text-muted-foreground tabular-nums">
+              Precio: {money(selectedProduct.unitPrice)} · Stock: {selectedProduct.currentStock} u
+            </p>
+          ) : null}
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <FormField
