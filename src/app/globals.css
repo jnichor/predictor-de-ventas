@@ -1,63 +1,203 @@
+@import "tailwindcss";
+
+/* =============================================================================
+   Design tokens (shadcn — neutral base + emerald accent)
+   Light mode por default. Dark mode se activa con class="dark" en el html.
+   ============================================================================= */
+
 :root {
-  color-scheme: dark;
-  --bg: #08111f;
-  --surface: rgba(10, 21, 38, 0.9);
-  --surface-strong: #0d1a2f;
-  --border: rgba(154, 178, 217, 0.18);
-  --text: #eef4ff;
-  --muted: #99a8bf;
-  --accent: #53d6ff;
-  --accent-strong: #1f9ac7;
-  --danger: #ff8b8b;
-  --shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.696 0.17 162.48);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.696 0.17 162.48);
+  --radius: 0.625rem;
+
+  --chart-1: oklch(0.696 0.17 162.48);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.696 0.17 162.48);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.696 0.17 162.48);
 }
 
-* {
-  box-sizing: border-box;
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.696 0.17 162.48);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.696 0.17 162.48);
+
+  --chart-1: oklch(0.696 0.17 162.48);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.696 0.17 162.48);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.696 0.17 162.48);
 }
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  /* Tabular numerals utility para tablas/montos */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* =============================================================================
+   LEGACY — CSS original del dashboard-client monolítico.
+   Se va a eliminar gradualmente durante las fases B2-B7.
+   Intencionalmente NO envolvimos esto en una clase raíz: las reglas son globales
+   igual que antes para que el dashboard-client actual siga funcionando sin cambios.
+   ============================================================================= */
 
 html,
 body {
   margin: 0;
   min-height: 100%;
+  color-scheme: dark;
   background:
     radial-gradient(circle at top, rgba(83, 214, 255, 0.18), transparent 30%),
     linear-gradient(180deg, #09111f 0%, #050b14 100%);
-  color: var(--text);
+  color: #eef4ff;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', sans-serif;
 }
 
 body {
   min-height: 100vh;
 }
 
-button,
-input,
-select,
-textarea {
+/* Tokens legacy con prefijo para no pisar los de shadcn */
+:root {
+  --legacy-bg: #08111f;
+  --legacy-surface: rgba(10, 21, 38, 0.9);
+  --legacy-surface-strong: #0d1a2f;
+  --legacy-border: rgba(154, 178, 217, 0.18);
+  --legacy-text: #eef4ff;
+  --legacy-muted: #99a8bf;
+  --legacy-accent: #53d6ff;
+  --legacy-accent-strong: #1f9ac7;
+  --legacy-danger: #ff8b8b;
+  --legacy-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+}
+
+.app-shell button,
+.app-shell input,
+.app-shell select,
+.app-shell textarea {
   font: inherit;
 }
 
-button {
+.app-shell button {
   border: 0;
   cursor: pointer;
 }
 
-input,
-select,
-textarea {
+.app-shell input,
+.app-shell select,
+.app-shell textarea {
   width: 100%;
-  border: 1px solid var(--border);
+  border: 1px solid var(--legacy-border);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
+  color: var(--legacy-text);
   padding: 0.85rem 1rem;
   outline: none;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+.app-shell input:focus,
+.app-shell select:focus,
+.app-shell textarea:focus {
   border-color: rgba(83, 214, 255, 0.5);
   box-shadow: 0 0 0 3px rgba(83, 214, 255, 0.12);
 }
@@ -80,7 +220,7 @@ textarea:focus {
 
 .auth-notice {
   margin: 14px 0 0;
-  color: var(--muted);
+  color: var(--legacy-muted);
 }
 
 .auth-toggle,
@@ -95,7 +235,7 @@ textarea:focus {
   padding: 0;
   background: transparent;
   border: 0;
-  color: var(--accent);
+  color: var(--legacy-accent);
 }
 
 .topbar {
@@ -119,19 +259,19 @@ textarea:focus {
   padding: 4px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
+  border: 1px solid var(--legacy-border);
 }
 
 .view-switch-button {
   border-radius: 999px;
   padding: 0.7rem 1rem;
   background: transparent;
-  color: var(--muted);
+  color: var(--legacy-muted);
 }
 
 .view-switch-button.active {
   background: rgba(83, 214, 255, 0.16);
-  color: var(--text);
+  color: var(--legacy-text);
 }
 
 .topbar h1,
@@ -144,7 +284,7 @@ textarea:focus {
   text-transform: uppercase;
   letter-spacing: 0.16em;
   font-size: 0.72rem;
-  color: var(--muted);
+  color: var(--legacy-muted);
 }
 
 .user-chip,
@@ -161,12 +301,12 @@ textarea:focus {
 .user-chip,
 .secondary-button {
   background: rgba(255, 255, 255, 0.06);
-  color: var(--text);
-  border: 1px solid var(--border);
+  color: var(--legacy-text);
+  border: 1px solid var(--legacy-border);
 }
 
 .primary-button {
-  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  background: linear-gradient(135deg, var(--legacy-accent), var(--legacy-accent-strong));
   color: #04121f;
   font-weight: 700;
 }
@@ -193,12 +333,12 @@ textarea:focus {
   padding: 0.7rem 0.95rem;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.05);
-  color: var(--muted);
+  color: var(--legacy-muted);
 }
 
 .subtab.active {
   background: rgba(83, 214, 255, 0.16);
-  color: var(--text);
+  color: var(--legacy-text);
 }
 
 .operation-panel {
@@ -220,7 +360,7 @@ textarea:focus {
 
 .alert-banner strong {
   margin-left: auto;
-  color: var(--accent);
+  color: var(--legacy-accent);
 }
 
 .metrics-grid {
@@ -232,9 +372,9 @@ textarea:focus {
 
 .metric-card,
 .panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
+  background: var(--legacy-surface);
+  border: 1px solid var(--legacy-border);
+  box-shadow: var(--legacy-shadow);
   backdrop-filter: blur(10px);
 }
 
@@ -258,7 +398,7 @@ textarea:focus {
   place-items: center;
   border-radius: 16px;
   background: rgba(83, 214, 255, 0.12);
-  color: var(--accent);
+  color: var(--legacy-accent);
 }
 
 .content-grid {
@@ -285,7 +425,7 @@ textarea:focus {
 }
 
 .muted {
-  color: var(--muted);
+  color: var(--legacy-muted);
 }
 
 .stack {
@@ -296,7 +436,7 @@ textarea:focus {
 .stack label {
   display: grid;
   gap: 8px;
-  color: var(--muted);
+  color: var(--legacy-muted);
 }
 
 .two-cols {
@@ -321,7 +461,7 @@ textarea:focus {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 10px;
-  color: var(--muted);
+  color: var(--legacy-muted);
   font-size: 0.8rem;
 }
 
@@ -351,7 +491,7 @@ textarea:focus {
 }
 
 .movement-item small {
-  color: var(--muted);
+  color: var(--legacy-muted);
 }
 
 .warning-list .list-row {
@@ -409,7 +549,7 @@ textarea:focus {
   border-radius: 999px;
   background: rgba(83, 214, 255, 0.16);
   border: 1px solid rgba(83, 214, 255, 0.24);
-  color: var(--text);
+  color: var(--legacy-text);
   font-size: 0.8rem;
 }
 

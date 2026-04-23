@@ -1,7 +1,16 @@
 import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import { GeistMono } from 'geist/font/mono';
 import { Toaster } from 'sonner';
+import { ThemeProvider } from '@/components/theme-provider';
 import '@/app/globals.css';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Sistema de inventario',
@@ -10,17 +19,24 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning className={`${inter.variable} ${GeistMono.variable}`}>
       <body>
-        {children}
-        <Toaster
-          position="top-right"
-          theme="dark"
-          richColors
-          closeButton
-          expand
-          duration={4000}
-        />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <Toaster
+            position="top-right"
+            theme="system"
+            richColors
+            closeButton
+            expand
+            duration={4000}
+          />
+        </ThemeProvider>
       </body>
     </html>
   );
