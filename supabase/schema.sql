@@ -4,6 +4,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   name text not null,
   role text not null default 'worker',
+  active boolean not null default true,
   created_at timestamptz not null default now()
 );
 
@@ -41,7 +42,10 @@ create table if not exists public.sales (
   total numeric(12,2) not null default 0,
   channel text not null default 'Mostrador',
   sold_at timestamptz not null default now(),
-  sold_by uuid references auth.users(id)
+  sold_by uuid references auth.users(id),
+  voided_at timestamptz,
+  voided_by uuid references auth.users(id),
+  voided_reason text
 );
 
 create index if not exists products_barcode_idx on public.products (barcode);
@@ -295,3 +299,66 @@ create trigger touch_products_updated_at
 before update on public.products
 for each row
 execute function public.touch_updated_at();
+
+create or replace function public.void_sale(
+  p_sale_id uuid,
+  p_voided_by uuid default null,
+  p_reason text default null
+)
+returns public.sales
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_sale public.sales;
+begin
+  select *
+  into v_sale
+  from public.sales
+  where id = p_sale_id
+  for update;
+
+  if not found then
+    raise exception 'Sale not found';
+  end if;
+
+  if v_sale.voided_at is not null then
+    raise exception 'Sale already voided';
+  end if;
+
+  update public.sales
+  set voided_at = now(),
+      voided_by = p_voided_by,
+      voided_reason = coalesce(p_reason, 'Anulación manual')
+  where id = p_sale_id;
+
+  update public.products
+  set current_stock = current_stock + v_sale.quantity,
+      updated_at = now()
+  where id = v_sale.product_id;
+
+  insert into public.inventory_movements (
+    product_id,
+    type,
+    quantity,
+    reason,
+    reference_id,
+    created_by
+  ) values (
+    v_sale.product_id,
+    'entry',
+    v_sale.quantity,
+    coalesce('Anulación venta: ' || p_reason, 'Anulación de venta'),
+    v_sale.id,
+    p_voided_by
+  );
+
+  select *
+  into v_sale
+  from public.sales
+  where id = p_sale_id;
+
+  return v_sale;
+end;
+$$;

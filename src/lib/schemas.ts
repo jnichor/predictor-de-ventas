@@ -14,6 +14,20 @@ export const createProductSchema = z.object({
   min_stock: z.number().int().nonnegative().default(0),
 });
 
+export const updateProductSchema = z.object({
+  barcode: z.string().trim().min(1).max(50).optional(),
+  name: z.string().trim().min(1).max(200).optional(),
+  description: z.string().max(500).optional(),
+  category: z.string().max(100).optional(),
+  unit_price: z.number().nonnegative().optional(),
+  min_stock: z.number().int().nonnegative().optional(),
+  active: z.boolean().optional(),
+});
+
+export const voidSaleSchema = z.object({
+  reason: z.string().max(500).optional(),
+});
+
 export const createSaleSchema = z.object({
   barcode: z.string().trim().min(1, 'Código requerido'),
   quantity: z.number().int().positive('La cantidad debe ser mayor a cero'),
@@ -33,6 +47,11 @@ export const inviteUserSchema = z.object({
   email: z.string().trim().email('Email inválido'),
   name: z.string().trim().min(1, 'Nombre requerido').max(200).optional(),
   role: userRoleSchema.default('worker'),
+});
+
+export const updateUserSchema = z.object({
+  role: userRoleSchema.optional(),
+  active: z.boolean().optional(),
 });
 
 export const createMovementSchema = z

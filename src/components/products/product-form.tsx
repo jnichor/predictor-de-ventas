@@ -1,8 +1,9 @@
 'use client';
 
+import { useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { Loader2, PackageOpen } from 'lucide-react';
+import { Loader2, PackageOpen, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,10 +17,12 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { productFormSchema, type ProductFormValues } from '@/lib/form-schemas';
+import type { Product } from '@/lib/types';
 
 type ProductFormProps = {
   accessToken: string;
-  onProductCreated?: () => void | Promise<void>;
+  initialProduct?: Product | null;
+  onProductSaved?: () => void | Promise<void>;
 };
 
 const defaults: ProductFormValues = {
@@ -32,43 +35,82 @@ const defaults: ProductFormValues = {
   minStock: 0,
 };
 
-export function ProductForm({ accessToken, onProductCreated }: ProductFormProps) {
+function toFormValues(product: Product): ProductFormValues {
+  return {
+    barcode: product.barcode,
+    name: product.name,
+    category: product.category,
+    description: product.description,
+    unitPrice: product.unitPrice,
+    currentStock: product.currentStock,
+    minStock: product.minStock,
+  };
+}
+
+export function ProductForm({ accessToken, initialProduct, onProductSaved }: ProductFormProps) {
+  const isEdit = !!initialProduct;
+
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
-    defaultValues: defaults,
+    defaultValues: initialProduct ? toFormValues(initialProduct) : defaults,
   });
+
+  // Re-sync defaults cuando cambia el producto a editar
+  useEffect(() => {
+    form.reset(initialProduct ? toFormValues(initialProduct) : defaults);
+  }, [initialProduct, form]);
 
   async function onSubmit(values: ProductFormValues) {
     try {
-      const response = await fetch('/api/products', {
-        method: 'POST',
+      const endpoint = isEdit
+        ? `/api/products/${initialProduct!.id}`
+        : '/api/products';
+      const method = isEdit ? 'PATCH' : 'POST';
+
+      // En edit no enviamos current_stock (el stock se cambia vía movimientos,
+      // no via edición directa, para mantener la trazabilidad)
+      const payload = isEdit
+        ? {
+            barcode: values.barcode,
+            name: values.name,
+            description: values.description ?? '',
+            category: values.category?.trim() || 'General',
+            unit_price: values.unitPrice,
+            min_stock: values.minStock,
+          }
+        : {
+            barcode: values.barcode,
+            name: values.name,
+            description: values.description ?? '',
+            category: values.category?.trim() || 'General',
+            unit_price: values.unitPrice,
+            current_stock: values.currentStock,
+            min_stock: values.minStock,
+          };
+
+      const response = await fetch(endpoint, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
-          barcode: values.barcode,
-          name: values.name,
-          description: values.description ?? '',
-          category: values.category?.trim() || 'General',
-          unit_price: values.unitPrice,
-          current_stock: values.currentStock,
-          min_stock: values.minStock,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
         const data = await response.json().catch(() => null);
-        toast.error(data?.error ?? 'No se pudo crear el producto.');
+        toast.error(
+          data?.error ?? (isEdit ? 'No se pudo actualizar el producto.' : 'No se pudo crear el producto.'),
+        );
         return;
       }
 
-      toast.success('Producto creado correctamente.');
-      form.reset(defaults);
-      await onProductCreated?.();
+      toast.success(isEdit ? 'Producto actualizado.' : 'Producto creado correctamente.');
+      if (!isEdit) form.reset(defaults);
+      await onProductSaved?.();
     } catch (error) {
       console.error('product submit', error);
-      toast.error('Error de conexión al crear el producto.');
+      toast.error('Error de conexión.');
     }
   }
 
@@ -150,32 +192,46 @@ export function ProductForm({ accessToken, onProductCreated }: ProductFormProps)
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="currentStock"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Stock inicial</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    className="tabular-nums"
-                    name={field.name}
-                    ref={field.ref}
-                    onBlur={field.onBlur}
-                    value={field.value ?? 0}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      field.onChange(v === '' ? 0 : Number(v));
-                    }}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {!isEdit ? (
+            <FormField
+              control={form.control}
+              name="currentStock"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Stock inicial</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      className="tabular-nums"
+                      name={field.name}
+                      ref={field.ref}
+                      onBlur={field.onBlur}
+                      value={field.value ?? 0}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        field.onChange(v === '' ? 0 : Number(v));
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ) : (
+            <div className="space-y-2">
+              <FormLabel className="text-muted-foreground">Stock actual</FormLabel>
+              <Input
+                readOnly
+                value={initialProduct?.currentStock ?? 0}
+                className="bg-muted/50 tabular-nums cursor-default"
+              />
+              <p className="text-xs text-muted-foreground">
+                Se modifica solo vía movimientos de inventario.
+              </p>
+            </div>
+          )}
         </div>
 
         <FormField
@@ -195,9 +251,9 @@ export function ProductForm({ accessToken, onProductCreated }: ProductFormProps)
                   onBlur={field.onBlur}
                   value={field.value ?? 0}
                   onChange={(e) => {
-                      const v = e.target.value;
-                      field.onChange(v === '' ? 0 : Number(v));
-                    }}
+                    const v = e.target.value;
+                    field.onChange(v === '' ? 0 : Number(v));
+                  }}
                 />
               </FormControl>
               <FormMessage />
@@ -223,7 +279,12 @@ export function ProductForm({ accessToken, onProductCreated }: ProductFormProps)
           {form.formState.isSubmitting ? (
             <>
               <Loader2 className="mr-2 size-4 animate-spin" />
-              Guardando...
+              {isEdit ? 'Guardando cambios...' : 'Guardando...'}
+            </>
+          ) : isEdit ? (
+            <>
+              <Save className="mr-2 size-4" />
+              Guardar cambios
             </>
           ) : (
             <>

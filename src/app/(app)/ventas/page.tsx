@@ -9,21 +9,37 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { BarcodeScanner } from '@/components/barcode-scanner';
 import { SaleForm } from '@/components/sales/sale-form';
-import { buildSaleRows, salesColumns } from '@/components/sales/sales-columns';
+import { buildSaleRows, buildSalesColumns, type SaleRow } from '@/components/sales/sales-columns';
 import { useAuth } from '@/hooks/use-auth';
 import type { Product, Sale } from '@/lib/types';
 
 export default function VentasPage() {
-  const { session } = useAuth();
+  const { session, currentUser } = useAuth();
   const accessToken = session?.access_token ?? null;
+  const isAdmin = currentUser?.role === 'admin';
   const [barcode, setBarcode] = useState('');
   const [sales, setSales] = useState<Sale[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [voidTarget, setVoidTarget] = useState<SaleRow | null>(null);
+  const [voidReason, setVoidReason] = useState('');
+  const [isVoiding, setIsVoiding] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!accessToken) return;
@@ -65,6 +81,46 @@ export default function VentasPage() {
   }, [products]);
 
   const saleRows = useMemo(() => buildSaleRows(sales, productById), [sales, productById]);
+
+  const salesColumns = useMemo(
+    () =>
+      buildSalesColumns({
+        isAdmin,
+        onVoid: (sale) => {
+          setVoidTarget(sale);
+          setVoidReason('');
+        },
+      }),
+    [isAdmin],
+  );
+
+  async function confirmVoid() {
+    if (!voidTarget || !accessToken) return;
+    setIsVoiding(true);
+    try {
+      const response = await fetch(`/api/sales/${voidTarget.id}/void`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ reason: voidReason.trim() || undefined }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        toast.error(data?.error ?? 'No se pudo anular la venta.');
+        return;
+      }
+      toast.success('Venta anulada. Stock devuelto al inventario.');
+      setVoidTarget(null);
+      await loadData();
+    } catch (error) {
+      console.error('void sale', error);
+      toast.error('Error de conexión al anular.');
+    } finally {
+      setIsVoiding(false);
+    }
+  }
 
   if (!accessToken) {
     return null;
@@ -191,6 +247,50 @@ export default function VentasPage() {
           />
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={voidTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setVoidTarget(null);
+            setVoidReason('');
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Anular esta venta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se van a devolver <strong>{voidTarget?.quantity} unidades</strong> de{' '}
+              <strong>{voidTarget?.productName}</strong> al stock. La venta original queda en el
+              historial marcada como anulada para auditoría.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="void-reason">Motivo (opcional)</Label>
+            <Textarea
+              id="void-reason"
+              value={voidReason}
+              onChange={(e) => setVoidReason(e.target.value)}
+              rows={2}
+              placeholder="Error al cobrar, cliente canceló, producto dañado..."
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isVoiding}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmVoid();
+              }}
+              disabled={isVoiding}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isVoiding ? 'Anulando...' : 'Anular venta'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

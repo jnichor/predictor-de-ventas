@@ -33,6 +33,9 @@ export type Sale = {
   channel: string;
   soldAt: string;
   soldBy: string;
+  voidedAt: string | null;
+  voidedBy: string | null;
+  voidedReason: string | null;
 };
 
 export type TrendPoint = {

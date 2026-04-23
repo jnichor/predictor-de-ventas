@@ -22,6 +22,9 @@ export type SaleRow = {
   channel: string;
   sold_at: string;
   sold_by: string | null;
+  voided_at: string | null;
+  voided_by: string | null;
+  voided_reason: string | null;
 };
 
 export type MovementRow = {
@@ -62,6 +65,9 @@ export function mapSale(row: SaleRow) {
     channel: row.channel,
     soldAt: row.sold_at,
     soldBy: row.sold_by ?? '',
+    voidedAt: row.voided_at ?? null,
+    voidedBy: row.voided_by ?? null,
+    voidedReason: row.voided_reason ?? null,
   };
 }
 

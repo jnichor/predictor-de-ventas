@@ -31,6 +31,12 @@ export async function getRequestUser(request: Request) {
     .eq('id', data.user.id)
     .single();
 
+  // Si el profile existe y está marcado como inactivo, rechazamos la request.
+  // El user tiene JWT válido (Supabase lo acepta) pero nuestra app lo bloquea.
+  if (profile && profile.active === false) {
+    return null;
+  }
+
   return {
     user: data.user,
     profile,

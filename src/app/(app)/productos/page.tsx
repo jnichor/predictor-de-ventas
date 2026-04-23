@@ -1,14 +1,25 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { HelpCircle, PackageOpen, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Sheet,
@@ -16,14 +27,15 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { ProductForm } from '@/components/products/product-form';
-import { productsColumns } from '@/components/products/products-columns';
+import { buildProductsColumns } from '@/components/products/products-columns';
 import { useAuth } from '@/hooks/use-auth';
 import type { Product } from '@/lib/types';
+
+type SheetState = { mode: 'create' } | { mode: 'edit'; product: Product } | null;
 
 export default function ProductosPage() {
   const router = useRouter();
@@ -31,7 +43,8 @@ export default function ProductosPage() {
   const accessToken = session?.access_token ?? null;
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheet, setSheet] = useState<SheetState>(null);
+  const [deactivateTarget, setDeactivateTarget] = useState<Product | null>(null);
 
   useEffect(() => {
     if (status === 'authenticated' && currentUser?.role !== 'admin') {
@@ -61,7 +74,40 @@ export default function ProductosPage() {
     void loadProducts();
   }, [loadProducts]);
 
+  async function handleDeactivate() {
+    if (!deactivateTarget || !accessToken) return;
+    try {
+      const response = await fetch(`/api/products/${deactivateTarget.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        toast.error(data?.error ?? 'No se pudo desactivar.');
+        return;
+      }
+      toast.success(`Producto "${deactivateTarget.name}" desactivado.`);
+      setDeactivateTarget(null);
+      await loadProducts();
+    } catch (error) {
+      console.error('deactivate', error);
+      toast.error('Error de conexión.');
+    }
+  }
+
+  const columns = useMemo(
+    () =>
+      buildProductsColumns({
+        onEdit: (product) => setSheet({ mode: 'edit', product }),
+        onDeactivate: (product) => setDeactivateTarget(product),
+      }),
+    [],
+  );
+
   if (!accessToken || currentUser?.role !== 'admin') return null;
+
+  const sheetOpen = sheet !== null;
+  const editingProduct = sheet?.mode === 'edit' ? sheet.product : null;
 
   return (
     <div className="space-y-6">
@@ -75,32 +121,59 @@ export default function ProductosPage() {
             Administrá el catálogo y el stock mínimo para alertas.
           </p>
         </div>
-        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-          <SheetTrigger asChild>
-            <Button>
-              <Plus className="mr-2 size-4" />
-              Nuevo producto
-            </Button>
-          </SheetTrigger>
-          <SheetContent className="w-full overflow-y-auto sm:max-w-md">
-            <SheetHeader>
-              <SheetTitle>Nuevo producto</SheetTitle>
-              <SheetDescription>
-                Se va a crear un movimiento de entrada si el stock inicial es mayor a cero.
-              </SheetDescription>
-            </SheetHeader>
-            <div className="mt-4 px-4 pb-4">
-              <ProductForm
-                accessToken={accessToken}
-                onProductCreated={async () => {
-                  await loadProducts();
-                  setSheetOpen(false);
-                }}
-              />
-            </div>
-          </SheetContent>
-        </Sheet>
+        <Button onClick={() => setSheet({ mode: 'create' })}>
+          <Plus className="mr-2 size-4" />
+          Nuevo producto
+        </Button>
       </div>
+
+      <Sheet open={sheetOpen} onOpenChange={(open) => !open && setSheet(null)}>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>{editingProduct ? 'Editar producto' : 'Nuevo producto'}</SheetTitle>
+            <SheetDescription>
+              {editingProduct
+                ? 'Cambiá precio, nombre u otros datos. El stock se modifica desde Inventario.'
+                : 'Se va a crear un movimiento de entrada si el stock inicial es mayor a cero.'}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-4 px-4 pb-4">
+            <ProductForm
+              accessToken={accessToken}
+              initialProduct={editingProduct}
+              onProductSaved={async () => {
+                await loadProducts();
+                setSheet(null);
+              }}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <AlertDialog
+        open={deactivateTarget !== null}
+        onOpenChange={(open) => !open && setDeactivateTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Desactivar este producto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{deactivateTarget?.name}</strong> dejará de aparecer en las búsquedas de venta
+              e inventario, pero su historial de ventas y movimientos se conserva intacto. Podés
+              reactivarlo después editándolo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeactivate}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Desactivar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Card>
         <Accordion type="single" collapsible>
@@ -166,7 +239,7 @@ export default function ProductosPage() {
         </CardHeader>
         <CardContent>
           <DataTable
-            columns={productsColumns}
+            columns={columns}
             data={products}
             isLoading={isLoading}
             globalFilterPlaceholder="Buscar por nombre, barcode o categoría"
