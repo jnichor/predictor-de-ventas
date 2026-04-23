@@ -22,6 +22,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { ProductCombobox } from '@/components/products/product-combobox';
 import { movementFormSchema, type MovementFormValues } from '@/lib/form-schemas';
 import type { Product } from '@/lib/types';
 
@@ -115,13 +116,13 @@ export function MovementForm({
           name="barcodeOrName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Código o nombre del producto</FormLabel>
+              <FormLabel>Producto</FormLabel>
               <FormControl>
-                <Input
-                  placeholder="7751234567890 o Arroz 1kg"
-                  autoComplete="off"
-                  className="font-mono tabular-nums"
-                  {...field}
+                <ProductCombobox
+                  products={products}
+                  value={field.value}
+                  onChange={(value) => field.onChange(value)}
+                  placeholder="Buscá por nombre o barcode..."
                 />
               </FormControl>
               <FormMessage />

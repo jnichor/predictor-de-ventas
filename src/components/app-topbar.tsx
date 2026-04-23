@@ -1,6 +1,6 @@
 'use client';
 
-import { LogOut, User as UserIcon } from 'lucide-react';
+import { LogOut, Search, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -31,6 +31,20 @@ export function AppTopbar({
     <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b bg-background px-4">
       <SidebarTrigger />
       <Separator orientation="vertical" className="h-6" />
+      <button
+        type="button"
+        onClick={() => {
+          const ev = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true });
+          document.dispatchEvent(ev);
+        }}
+        className="flex h-9 w-full max-w-xs items-center gap-2 rounded-md border bg-muted/40 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted md:w-64"
+      >
+        <Search className="size-4" />
+        <span className="flex-1 text-left">Buscar...</span>
+        <kbd className="pointer-events-none hidden select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium opacity-100 sm:inline-flex">
+          <span className="text-xs">⌘</span>K
+        </kbd>
+      </button>
       <div className="flex-1" />
       <ThemeToggle />
       <DropdownMenu>

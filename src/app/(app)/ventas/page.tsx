@@ -106,6 +106,7 @@ export default function VentasPage() {
             <SaleForm
               accessToken={accessToken}
               barcode={barcode}
+              products={products}
               onBarcodeChange={setBarcode}
               onSaleCreated={loadData}
             />

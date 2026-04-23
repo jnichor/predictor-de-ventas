@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { SalesTrendChart } from '@/components/charts/sales-trend-chart';
+import { EmptyState } from '@/components/empty-state';
 import { useAuth } from '@/hooks/use-auth';
 import { useDashboardData, type Period } from '@/hooks/use-dashboard-data';
 import { money } from '@/lib/utils';
@@ -145,6 +146,7 @@ export default function DashboardPage() {
               <SalesTrendChart data={trendPoints} className="h-[240px] w-full" />
             ) : (
               <EmptyState
+                icon={<LineChartIcon className="size-5" />}
                 title="Todavía no hay ventas"
                 description="Las ventas que registres van a aparecer acá con su tendencia."
               />
@@ -168,7 +170,11 @@ export default function DashboardPage() {
                 <Skeleton className="h-10 w-full" />
               </div>
             ) : lowStockProducts.length === 0 ? (
-              <EmptyState title="Todo en orden" description="Ningún producto bajo el mínimo." />
+              <EmptyState
+                icon={<PackageCheck className="size-5" />}
+                title="Todo en orden"
+                description="Ningún producto bajo el mínimo."
+              />
             ) : (
               <ul className="divide-y">
                 {lowStockProducts.slice(0, 6).map((p) => (
@@ -203,7 +209,11 @@ export default function DashboardPage() {
                 <Skeleton className="h-10 w-full" />
               </div>
             ) : topProducts.length === 0 ? (
-              <EmptyState title="Sin datos" description="Todavía no hay ventas en el período." />
+              <EmptyState
+                icon={<TrendingUp className="size-5" />}
+                title="Sin datos"
+                description="Todavía no hay ventas en el período."
+              />
             ) : (
               <ol className="space-y-1">
                 {topProducts.map((item, i) => (
@@ -248,6 +258,7 @@ export default function DashboardPage() {
               </div>
             ) : recommendations.length === 0 ? (
               <EmptyState
+                icon={<PackageCheck className="size-5" />}
                 title="Sin alertas"
                 description="No hay productos por reabastecer ahora."
               />
@@ -323,11 +334,3 @@ function KpiCard({
   );
 }
 
-function EmptyState({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-1 py-6 text-center">
-      <p className="text-sm font-medium">{title}</p>
-      <p className="text-xs text-muted-foreground">{description}</p>
-    </div>
-  );
-}

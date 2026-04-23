@@ -22,16 +22,25 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { ProductCombobox } from '@/components/products/product-combobox';
 import { saleFormSchema, type SaleFormValues } from '@/lib/form-schemas';
+import type { Product } from '@/lib/types';
 
 type SaleFormProps = {
   accessToken: string;
   barcode: string;
+  products: Product[];
   onBarcodeChange: (value: string) => void;
   onSaleCreated?: () => void | Promise<void>;
 };
 
-export function SaleForm({ accessToken, barcode, onBarcodeChange, onSaleCreated }: SaleFormProps) {
+export function SaleForm({
+  accessToken,
+  barcode,
+  products,
+  onBarcodeChange,
+  onSaleCreated,
+}: SaleFormProps) {
   const form = useForm<SaleFormValues>({
     resolver: zodResolver(saleFormSchema),
     defaultValues: {
@@ -82,17 +91,16 @@ export function SaleForm({ accessToken, barcode, onBarcodeChange, onSaleCreated 
           name="barcode"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Código o nombre del producto</FormLabel>
+              <FormLabel>Producto</FormLabel>
               <FormControl>
-                <Input
-                  placeholder="7751234567890"
-                  autoComplete="off"
-                  className="font-mono tabular-nums"
-                  {...field}
-                  onChange={(e) => {
-                    field.onChange(e);
-                    onBarcodeChange(e.target.value);
+                <ProductCombobox
+                  products={products}
+                  value={field.value}
+                  onChange={(value) => {
+                    field.onChange(value);
+                    onBarcodeChange(value);
                   }}
+                  placeholder="Buscá por nombre o barcode..."
                 />
               </FormControl>
               <FormMessage />

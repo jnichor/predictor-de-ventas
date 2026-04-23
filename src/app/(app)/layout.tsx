@@ -1,23 +1,46 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
 import { AppTopbar } from '@/components/app-topbar';
+import { CommandPalette } from '@/components/command-palette';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth';
+import type { Product } from '@/lib/types';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const { status, currentUser, signOut } = useAuth();
+  const { status, session, currentUser, signOut } = useAuth();
+  const accessToken = session?.access_token ?? null;
+  const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.replace('/login');
     }
   }, [status, router]);
+
+  const loadProducts = useCallback(async () => {
+    if (!accessToken) return;
+    try {
+      const response = await fetch('/api/products', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data.products)) setProducts(data.products);
+      }
+    } catch (error) {
+      console.error('layout loadProducts', error);
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    void loadProducts();
+  }, [loadProducts]);
 
   async function handleSignOut() {
     await signOut();
@@ -48,6 +71,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <AppTopbar currentUser={currentUser} onSignOut={handleSignOut} />
         <main className="flex-1 bg-background p-4 md:p-6">{children}</main>
       </SidebarInset>
+      <CommandPalette
+        currentUser={currentUser}
+        products={products}
+        onSignOut={handleSignOut}
+      />
     </SidebarProvider>
   );
 }

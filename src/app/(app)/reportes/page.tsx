@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/tabs';
 import { SalesTrendChart } from '@/components/charts/sales-trend-chart';
 import { TopProductsChart } from '@/components/charts/top-products-chart';
+import { EmptyState } from '@/components/empty-state';
 import { useAuth } from '@/hooks/use-auth';
 import { money } from '@/lib/utils';
 
@@ -148,6 +149,7 @@ export default function ReportesPage() {
             <SalesTrendChart data={salesByPeriod} className="h-[280px] w-full" />
           ) : (
             <EmptyState
+              icon={<LineChartIcon className="size-5" />}
               title="Sin ventas en el período"
               description="Probá ampliar el rango o registrá más ventas."
             />
@@ -165,7 +167,11 @@ export default function ReportesPage() {
             {isLoading ? (
               <Skeleton className="h-[280px] w-full" />
             ) : topProducts.length === 0 ? (
-              <EmptyState title="Sin datos" description="No hay ventas en el período." />
+              <EmptyState
+                icon={<BarChart3 className="size-5" />}
+                title="Sin datos"
+                description="No hay ventas en el período."
+              />
             ) : (
               <Tabs defaultValue="quantity" className="space-y-4">
                 <TabsList>
@@ -200,7 +206,11 @@ export default function ReportesPage() {
             {isLoading ? (
               <Skeletons />
             ) : lowStockProducts.length === 0 ? (
-              <EmptyState title="Todo en orden" description="No hay productos bajo el mínimo." />
+              <EmptyState
+                icon={<Package className="size-5" />}
+                title="Todo en orden"
+                description="No hay productos bajo el mínimo."
+              />
             ) : (
               <Table>
                 <TableHeader>
@@ -286,11 +296,3 @@ function Skeletons() {
   );
 }
 
-function EmptyState({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-1 py-12 text-center">
-      <p className="text-sm font-medium">{title}</p>
-      <p className="text-xs text-muted-foreground">{description}</p>
-    </div>
-  );
-}
