@@ -29,6 +29,7 @@ import { BarcodeScanner } from '@/components/barcode-scanner';
 import { SaleForm } from '@/components/sales/sale-form';
 import { buildSaleRows, buildSalesColumns, type SaleRow } from '@/components/sales/sales-columns';
 import { useAuth } from '@/hooks/use-auth';
+import { useRealtimeTable } from '@/hooks/use-realtime-table';
 import type { Product, Sale } from '@/lib/types';
 
 export default function VentasPage() {
@@ -72,6 +73,9 @@ export default function VentasPage() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  // Realtime: recarga la tabla cuando otro dispositivo registra una venta
+  useRealtimeTable({ table: 'sales', onChange: loadData });
 
   const productByBarcode = useMemo(() => {
     const map = new Map<string, Product>();

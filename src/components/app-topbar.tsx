@@ -28,7 +28,7 @@ export function AppTopbar({
     currentUser?.role === 'admin' ? 'Administrador' : currentUser?.role === 'worker' ? 'Worker' : '—';
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-border/50 bg-background/60 backdrop-blur-md px-4">
+    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-border/60 bg-white/70 dark:bg-background/60 backdrop-blur-xl px-4">
       <SidebarTrigger />
       <Separator orientation="vertical" className="h-6" />
       <button
@@ -37,11 +37,11 @@ export function AppTopbar({
           const ev = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true });
           document.dispatchEvent(ev);
         }}
-        className="flex h-9 w-full max-w-xs items-center gap-2 rounded-md border bg-muted/40 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted md:w-64"
+        className="group flex h-10 w-full max-w-sm items-center gap-3 rounded-xl border border-border/60 bg-white/80 dark:bg-muted/40 px-3.5 text-sm text-muted-foreground shadow-sm transition-all hover:border-primary/40 hover:shadow-md md:w-72"
       >
-        <Search className="size-4" />
-        <span className="flex-1 text-left">Buscar...</span>
-        <kbd className="pointer-events-none hidden select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium opacity-100 sm:inline-flex">
+        <Search className="size-4 shrink-0 text-primary/70 group-hover:text-primary" />
+        <span className="flex-1 text-left">Buscar productos, acciones...</span>
+        <kbd className="pointer-events-none hidden select-none items-center gap-1 rounded border border-border/60 bg-background px-1.5 py-0.5 font-mono text-[10px] font-medium opacity-100 sm:inline-flex">
           <span className="text-xs">⌘</span>K
         </kbd>
       </button>

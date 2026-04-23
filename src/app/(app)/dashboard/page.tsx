@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { SalesTrendChart } from '@/components/charts/sales-trend-chart';
 import { VibrantKpiCard } from '@/components/charts/vibrant-kpi-card';
+import { DashboardHero } from '@/components/dashboard-hero';
 import { EmptyState } from '@/components/empty-state';
 import { OnboardingBanner } from '@/components/onboarding-banner';
 import { useAuth } from '@/hooks/use-auth';
@@ -75,32 +76,28 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Panel principal
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight">Resumen del negocio</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Select value={period} onValueChange={(value) => setPeriod(value as Period)}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">Hoy</SelectItem>
-              <SelectItem value="7d">7 días</SelectItem>
-              <SelectItem value="30d">30 días</SelectItem>
-              <SelectItem value="90d">90 días</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button asChild>
-            <Link href="/ventas">
-              <ReceiptText className="mr-2 size-4" />
-              Nueva venta
-            </Link>
-          </Button>
-        </div>
+      {/* Hero dark con gradient — estilo Job Dashboard */}
+      <DashboardHero userName={currentUser?.name} />
+
+      {/* Controles bajo el hero: period + acción rápida */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Select value={period} onValueChange={(value) => setPeriod(value as Period)}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="today">Hoy</SelectItem>
+            <SelectItem value="7d">7 días</SelectItem>
+            <SelectItem value="30d">30 días</SelectItem>
+            <SelectItem value="90d">90 días</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button asChild>
+          <Link href="/ventas">
+            <ReceiptText className="mr-2 size-4" />
+            Nueva venta
+          </Link>
+        </Button>
       </div>
 
       {/* Onboarding — solo visible para admin con estado incompleto */}

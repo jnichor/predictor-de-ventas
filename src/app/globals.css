@@ -3,86 +3,94 @@
 @custom-variant dark (&:is(.dark *));
 
 /* =============================================================================
-   Design tokens (shadcn — neutral base + emerald accent)
-   Light mode por default. Dark mode se activa con class="dark" en el html.
+   Design tokens — tema light celeste moderno tipo dashboard SaaS.
+   Inspiración: fondo sky-50/100, primary blue-600, accent cyan-500, hero dark.
    ============================================================================= */
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.696 0.17 162.48);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.696 0.17 162.48);
-  --radius: 0.625rem;
+  /* Fondos y superficies */
+  --background: hsl(210 100% 98%);
+  --foreground: hsl(222 47% 11%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(222 47% 11%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(222 47% 11%);
 
-  --chart-1: oklch(0.696 0.17 162.48);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  /* Acciones principales */
+  --primary: hsl(217 91% 60%);         /* blue-500 vibrante */
+  --primary-foreground: hsl(0 0% 100%);
 
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.696 0.17 162.48);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.696 0.17 162.48);
+  /* Superficies secundarias */
+  --secondary: hsl(210 100% 96%);      /* sky-100 suave */
+  --secondary-foreground: hsl(222 47% 20%);
+  --muted: hsl(210 40% 96%);
+  --muted-foreground: hsl(215 16% 47%);
+  --accent: hsl(188 95% 43%);          /* cyan-500 */
+  --accent-foreground: hsl(0 0% 100%);
+
+  /* Alertas */
+  --destructive: hsl(0 84% 60%);
+  --destructive-foreground: hsl(0 0% 100%);
+
+  /* Bordes e inputs */
+  --border: hsl(214 32% 91%);
+  --input: hsl(214 32% 91%);
+  --ring: hsl(217 91% 60%);
+  --radius: 0.75rem;
+
+  /* Paleta de charts — vibrantes pero armónicos con el tema */
+  --chart-1: hsl(217 91% 60%);   /* blue */
+  --chart-2: hsl(188 95% 43%);   /* cyan */
+  --chart-3: hsl(162 73% 46%);   /* emerald */
+  --chart-4: hsl(262 83% 66%);   /* violet */
+  --chart-5: hsl(330 86% 60%);   /* pink */
+
+  /* Sidebar — blanco con separador sutil */
+  --sidebar: hsl(0 0% 100%);
+  --sidebar-foreground: hsl(222 47% 11%);
+  --sidebar-primary: hsl(217 91% 60%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(210 100% 96%);
+  --sidebar-accent-foreground: hsl(222 47% 20%);
+  --sidebar-border: hsl(214 32% 91%);
+  --sidebar-ring: hsl(217 91% 60%);
 }
 
 .dark {
-  /* Base sobre el gradient #0F172A → #1E1B4B
-     Los cards usan alpha para glass-effect sobre el gradient. */
   --background: hsl(222 47% 8%);
   --foreground: hsl(210 40% 98%);
   --card: hsl(222 47% 12% / 0.6);
   --card-foreground: hsl(210 40% 98%);
   --popover: hsl(222 47% 12%);
   --popover-foreground: hsl(210 40% 98%);
-  --primary: hsl(162 73% 46%);
+  --primary: hsl(217 91% 65%);
   --primary-foreground: hsl(222 47% 8%);
   --secondary: hsl(222 40% 18%);
   --secondary-foreground: hsl(210 40% 98%);
   --muted: hsl(222 40% 16%);
   --muted-foreground: hsl(215 20% 65%);
-  --accent: hsl(222 40% 18%);
-  --accent-foreground: hsl(210 40% 98%);
+  --accent: hsl(188 95% 43%);
+  --accent-foreground: hsl(0 0% 100%);
   --destructive: hsl(0 75% 60%);
   --destructive-foreground: hsl(210 40% 98%);
   --border: hsl(215 28% 28% / 0.5);
   --input: hsl(215 28% 28% / 0.5);
-  --ring: hsl(162 73% 46%);
+  --ring: hsl(217 91% 65%);
 
-  /* Colores vibrantes para KPI cards y charts — al estilo dashboard moderno */
-  --chart-1: hsl(162 73% 46%);  /* emerald — primary */
-  --chart-2: hsl(330 86% 60%);  /* pink */
-  --chart-3: hsl(262 83% 66%);  /* purple */
-  --chart-4: hsl(38 92% 60%);   /* amber */
-  --chart-5: hsl(199 89% 55%);  /* sky blue */
+  --chart-1: hsl(217 91% 65%);
+  --chart-2: hsl(188 95% 50%);
+  --chart-3: hsl(162 73% 50%);
+  --chart-4: hsl(262 83% 72%);
+  --chart-5: hsl(330 86% 65%);
 
   --sidebar: hsl(222 47% 10% / 0.85);
   --sidebar-foreground: hsl(210 40% 98%);
-  --sidebar-primary: hsl(162 73% 46%);
+  --sidebar-primary: hsl(217 91% 65%);
   --sidebar-primary-foreground: hsl(222 47% 8%);
   --sidebar-accent: hsl(222 40% 18% / 0.7);
   --sidebar-accent-foreground: hsl(210 40% 98%);
   --sidebar-border: hsl(215 28% 28% / 0.4);
-  --sidebar-ring: hsl(162 73% 46%);
+  --sidebar-ring: hsl(217 91% 65%);
 }
 
 @theme inline {
@@ -148,20 +156,90 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Fondo con gradient al estilo dashboard moderno cuando está en dark mode.
-   `fixed` hace que el gradient no se mueva al hacer scroll. */
+/* Fondo celeste pastel en light mode — dashboard SaaS moderno */
+html:not(.dark) body {
+  background: linear-gradient(180deg, hsl(210 100% 97%) 0%, hsl(213 100% 96%) 100%)
+    fixed;
+}
+
+/* Fondo dark con gradient slate → indigo */
 html.dark body {
-  background: linear-gradient(135deg, #0F172A, #1E1B4B) fixed;
+  background: linear-gradient(135deg, #0f172a, #1e1b4b) fixed;
   background-attachment: fixed;
 }
 
-/* Glass effect en dark mode para cards shadcn "sueltas" (las que no son
-   VibrantKpiCard ni tienen bg propio con gradient). Se aplica a los Card
-   que NO tengan la clase `not-glass` (para opt-out) y NO sean kpi-vibrant. */
-html.dark [data-slot="card"]:not(.not-glass):not(.kpi-vibrant) {
+/* Cards en light mode — blancas con sombra sutil */
+html:not(.dark) [data-slot="card"]:not(.not-glass):not(.kpi-vibrant):not(.hero-card) {
+  background: hsl(0 0% 100%);
+  border-color: hsl(214 32% 91%);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+/* Cards glass en dark mode */
+html.dark [data-slot="card"]:not(.not-glass):not(.kpi-vibrant):not(.hero-card) {
   backdrop-filter: blur(12px) saturate(140%);
   -webkit-backdrop-filter: blur(12px) saturate(140%);
   background: hsl(222 47% 14% / 0.55);
   border-color: hsl(215 28% 40% / 0.3);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+/* Hero card — card oscuro con gradient que destaca en fondos light */
+.hero-card {
+  background: linear-gradient(
+    135deg,
+    #0f172a 0%,
+    #1e3a8a 50%,
+    #0f172a 100%
+  );
+  position: relative;
+  overflow: hidden;
+  border: 1px solid hsl(215 28% 30% / 0.3);
+  color: hsl(210 40% 98%);
+  box-shadow: 0 20px 60px -15px rgba(15, 23, 42, 0.4);
+}
+
+.hero-card::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 60%;
+  height: 200%;
+  background: radial-gradient(
+    ellipse,
+    hsl(188 95% 43% / 0.15) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.hero-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    45deg,
+    transparent 48%,
+    hsl(217 91% 60% / 0.04) 48%,
+    hsl(217 91% 60% / 0.04) 52%,
+    transparent 52%
+  );
+  background-size: 80px 80px;
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+/* Text gradient para títulos del hero */
+.text-gradient-accent {
+  background: linear-gradient(
+    90deg,
+    hsl(210 40% 98%) 0%,
+    hsl(188 95% 70%) 50%,
+    hsl(217 91% 75%) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
 }

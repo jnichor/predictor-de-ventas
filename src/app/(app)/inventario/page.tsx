@@ -18,6 +18,7 @@ import {
   movementsColumns,
 } from '@/components/inventory/movements-columns';
 import { useAuth } from '@/hooks/use-auth';
+import { useRealtimeTable } from '@/hooks/use-realtime-table';
 import type { InventoryMovement, Product } from '@/lib/types';
 
 export default function InventarioPage() {
@@ -57,6 +58,9 @@ export default function InventarioPage() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  // Realtime: actualiza el historial cuando otro user registra un movimiento
+  useRealtimeTable({ table: 'inventory_movements', onChange: loadData });
 
   const productById = useMemo(() => {
     const map = new Map<string, Product>();
