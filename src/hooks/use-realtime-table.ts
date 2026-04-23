@@ -42,7 +42,6 @@ export function useRealtimeTable({
     const channel = supabase
       .channel(`realtime:${schema}:${table}`)
       .on(
-        // @ts-expect-error supabase types para realtime son laxos
         'postgres_changes',
         { event: '*', schema, table },
         () => {
