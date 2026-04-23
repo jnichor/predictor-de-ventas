@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 /* =============================================================================
    Design tokens (shadcn — neutral base + emerald accent)
    Light mode por default. Dark mode se activa con class="dark" en el html.
@@ -134,27 +136,20 @@
 }
 
 /* =============================================================================
-   LEGACY — CSS original del dashboard-client monolítico.
-   Se va a eliminar gradualmente durante las fases B2-B7.
-   Intencionalmente NO envolvimos esto en una clase raíz: las reglas son globales
-   igual que antes para que el dashboard-client actual siga funcionando sin cambios.
+   LEGACY — CSS original del panel de Operaciones.
+   Se va a eliminar gradualmente durante B3-B7 cuando splittemos Operaciones en
+   rutas dedicadas con componentes shadcn.
    ============================================================================= */
 
 html,
 body {
   margin: 0;
   min-height: 100%;
-  color-scheme: dark;
-  background:
-    radial-gradient(circle at top, rgba(83, 214, 255, 0.18), transparent 30%),
-    linear-gradient(180deg, #09111f 0%, #050b14 100%);
-  color: #eef4ff;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    'Segoe UI', sans-serif;
 }
 
 body {
   min-height: 100vh;
+  font-family: var(--font-sans);
 }
 
 /* Tokens legacy con prefijo para no pisar los de shadcn */
@@ -169,6 +164,19 @@ body {
   --legacy-accent-strong: #1f9ac7;
   --legacy-danger: #ff8b8b;
   --legacy-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+}
+
+/* Contenedor de la vista Operaciones legacy — fondo oscuro localizado
+   hasta que B3 migre estos forms a componentes shadcn. */
+.legacy-ops {
+  color-scheme: dark;
+  color: var(--legacy-text);
+  background:
+    radial-gradient(circle at top, rgba(83, 214, 255, 0.12), transparent 40%),
+    linear-gradient(180deg, #09111f 0%, #050b14 100%);
+  border: 1px solid var(--legacy-border);
+  border-radius: 16px;
+  padding: 20px;
 }
 
 .app-shell button,

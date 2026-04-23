@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { GeistMono } from 'geist/font/mono';
-import { Toaster } from 'sonner';
+import { Toaster } from '@/components/ui/sonner';
 import { ThemeProvider } from '@/components/theme-provider';
 import '@/app/globals.css';
 
@@ -28,14 +28,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           disableTransitionOnChange
         >
           {children}
-          <Toaster
-            position="top-right"
-            theme="system"
-            richColors
-            closeButton
-            expand
-            duration={4000}
-          />
+          <Toaster position="top-right" richColors closeButton expand duration={4000} />
         </ThemeProvider>
       </body>
     </html>

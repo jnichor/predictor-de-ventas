@@ -1,12 +1,12 @@
 'use client';
 
-import type { FormEvent, ReactNode } from 'react';
+import type { FormEvent } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Barcode, Boxes, LineChart, PackagePlus, ReceiptText, ScanBarcode, TriangleAlert } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { BarcodeScanner } from './barcode-scanner';
-import type { InventoryMovement, Product, Sale, TrendPoint } from '@/lib/types';
-import { money, toDateLabel } from '@/lib/utils';
+import type { InventoryMovement, Product, Sale } from '@/lib/types';
 import { supabase } from '@/lib/supabase/client';
 import type { Session } from '@supabase/supabase-js';
 
@@ -33,11 +33,6 @@ type InventoryFormState = {
   quantity: string;
   reason: string;
   adjustmentDirection: 'increase' | 'decrease';
-};
-
-type LoginFormState = {
-  email: string;
-  password: string;
 };
 
 type InviteFormState = {
@@ -100,11 +95,6 @@ const emptyInventoryForm: InventoryFormState = {
   adjustmentDirection: 'increase',
 };
 
-const emptyLoginForm: LoginFormState = {
-  email: '',
-  password: '',
-};
-
 const emptyInviteForm: InviteFormState = {
   email: '',
   name: '',
@@ -115,50 +105,20 @@ function createId(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function buildTrendPoints(sales: Sale[]): TrendPoint[] {
-  const labels = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (6 - index));
-    return date.toISOString().slice(0, 10);
-  });
 
-  const amounts = labels.map((label) => {
-    const dayTotal = sales
-      .filter((sale) => sale.soldAt.slice(0, 10) === label)
-      .reduce((sum, sale) => sum + sale.total, 0);
+type OperationTab = 'sale' | 'inventory' | 'activity' | 'admin' | 'analytics' | 'users';
 
-    return {
-      label: toDateLabel(label),
-      value: dayTotal,
-    };
-  });
-
-  return amounts;
+function isOperationTab(value: string | null): value is OperationTab {
+  return value === 'sale' || value === 'inventory' || value === 'activity' || value === 'admin' || value === 'analytics' || value === 'users';
 }
 
-function buildTrendPointsFromReport(salesByPeriod: Array<{ label: string; value: number }>): TrendPoint[] {
-  return salesByPeriod.map((item) => ({
-    label: toDateLabel(item.label),
-    value: item.value,
-  }));
-}
+export function OperationsClient() {
+  const searchParams = useSearchParams();
+  const initialTab = (() => {
+    const t = searchParams.get('tab');
+    return isOperationTab(t) ? t : 'sale';
+  })();
 
-function linePath(points: TrendPoint[]) {
-  if (points.length < 2) {
-    return '';
-  }
-
-  const max = Math.max(...points.map((point) => point.value), 1);
-  return points
-    .map((point, index) => {
-      const x = (index / (points.length - 1)) * 100;
-      const y = 100 - (point.value / max) * 70 - 15;
-      return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
-    })
-    .join(' ');
-}
-
-export function DashboardClient() {
   const [session, setSession] = useState<Session | null>(null);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -168,13 +128,18 @@ export function DashboardClient() {
   const [productForm, setProductForm] = useState<ProductFormState>(emptyProductForm);
   const [saleForm, setSaleForm] = useState<SaleFormState>(emptySaleForm);
   const [inventoryForm, setInventoryForm] = useState<InventoryFormState>(emptyInventoryForm);
-  const [loginForm, setLoginForm] = useState<LoginFormState>(emptyLoginForm);
   const [inviteForm, setInviteForm] = useState<InviteFormState>(emptyInviteForm);
   const [reports, setReports] = useState<ReportState | null>(null);
   const [forecast, setForecast] = useState<ForecastItem[]>([]);
   const [period, setPeriod] = useState<'today' | '7d' | '30d' | '90d'>('7d');
-  const [screen, setScreen] = useState<'overview' | 'operations'>('overview');
-  const [operationTab, setOperationTab] = useState<'sale' | 'inventory' | 'activity' | 'admin' | 'analytics' | 'users'>('sale');
+  const [operationTab, setOperationTab] = useState<OperationTab>(initialTab);
+
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (isOperationTab(t)) {
+      setOperationTab(t);
+    }
+  }, [searchParams]);
 
   const loadCurrentUser = useCallback(async (accessToken: string) => {
     try {
@@ -308,61 +273,8 @@ export function DashboardClient() {
     void loadForecast(session.access_token);
   }, [loadForecast, loadReports, period, session?.access_token]);
 
-  async function handleLogin(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!supabase) {
-      toast.error('Falta configurar Supabase.');
-      return;
-    }
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email: loginForm.email,
-      password: loginForm.password,
-    });
-
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-
-    setLoginForm(emptyLoginForm);
-    toast.success('Sesión iniciada.');
-    await loadSession();
-  }
-
-  async function handleLogout() {
-    if (!supabase) {
-      return;
-    }
-
-    await supabase.auth.signOut();
-    setSession(null);
-    setCurrentUser(null);
-    toast.success('Sesión cerrada.');
-  }
-
-  const trendPoints = useMemo(
-    () => (reports?.salesByPeriod?.length ? buildTrendPointsFromReport(reports.salesByPeriod) : buildTrendPoints(sales)),
-    [reports, sales],
-  );
-  const totalStock = useMemo(
-    () => products.reduce((sum, product) => sum + product.currentStock, 0),
-    [products],
-  );
-  const salesToday = useMemo(
-    () =>
-      sales
-        .filter((sale) => sale.soldAt.slice(0, 10) === new Date().toISOString().slice(0, 10))
-        .reduce((sum, sale) => sum + sale.total, 0),
-    [sales],
-  );
   const lowStockProducts = useMemo(
     () => reports?.lowStockProducts ?? products.filter((product) => product.currentStock <= product.minStock),
-    [reports, products],
-  );
-  const inventoryValue = useMemo(
-    () => reports?.summary.inventoryValue ?? products.reduce((sum, product) => sum + product.currentStock * product.unitPrice, 0),
     [reports, products],
   );
   const topProducts = useMemo(() => {
@@ -398,47 +310,6 @@ export function DashboardClient() {
         })),
     [movements, products],
   );
-
-  const recommendations = useMemo(() => {
-    return forecast.slice(0, 3).map((item) => `${item.name}: pedir ${item.suggestedOrder} unidades`);
-  }, [forecast]);
-
-  if (!session) {
-    return (
-      <main className="app-shell auth-shell">
-        <section className="panel auth-panel">
-          <p className="eyebrow">Acceso al sistema</p>
-          <h1>Iniciar sesión</h1>
-          <form className="stack" onSubmit={handleLogin}>
-            <label>
-              Correo
-              <input
-                type="email"
-                value={loginForm.email}
-                onChange={(event) => setLoginForm((current) => ({ ...current, email: event.target.value }))}
-                placeholder="trabajador@tienda.com"
-                autoComplete="email"
-              />
-            </label>
-            <label>
-              Contraseña
-              <input
-                type="password"
-                value={loginForm.password}
-                onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
-                placeholder="********"
-                autoComplete="current-password"
-              />
-            </label>
-            <button className="primary-button" type="submit">Entrar</button>
-          </form>
-          <p className="auth-notice muted">
-            ¿Sos un nuevo miembro del equipo? El administrador te debe enviar una invitación por email.
-          </p>
-        </section>
-      </main>
-    );
-  }
 
   async function handleAddProduct(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -642,70 +513,7 @@ export function DashboardClient() {
   }
 
   return (
-    <main className="app-shell">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Inventario + ventas + demanda</p>
-          <h1>Sistema de tienda</h1>
-        </div>
-        <div className="topbar-actions">
-          <div className="view-switch">
-            <button
-              type="button"
-              className={screen === 'overview' ? 'view-switch-button active' : 'view-switch-button'}
-              onClick={() => setScreen('overview')}
-            >
-              Resumen
-            </button>
-            <button
-              type="button"
-              className={screen === 'operations' ? 'view-switch-button active' : 'view-switch-button'}
-              onClick={() => setScreen('operations')}
-            >
-              Operaciones
-            </button>
-          </div>
-          <div className="user-chip">
-            {currentUser?.name ?? session.user.email ?? 'Usuario'} · {currentUser?.role ?? 'worker'}{' '}
-            <button className="inline-link" type="button" onClick={handleLogout}>
-              Salir
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {screen === 'overview' ? (
-        <section className="action-row">
-          <button className="primary-button" type="button" onClick={() => {
-            setOperationTab('sale');
-            setScreen('operations');
-          }}>
-            <ScanBarcode size={16} /> Escanear
-          </button>
-          <button className="secondary-button" type="button" onClick={() => {
-            setOperationTab('sale');
-            setScreen('operations');
-          }}>
-            <ReceiptText size={16} /> Vender
-          </button>
-          <button className="secondary-button" type="button" onClick={() => {
-            setOperationTab(currentUser?.role === 'admin' ? 'admin' : 'inventory');
-            setScreen('operations');
-          }}>
-            <LineChart size={16} /> Gestionar
-          </button>
-        </section>
-      ) : (
-        <section className="action-row">
-          <button className="primary-button" type="button" onClick={() => setScreen('overview')}>
-            <LineChart size={16} /> Ver resumen
-          </button>
-          <button className="secondary-button" type="button" onClick={() => setScreen('overview')}>
-            <Barcode size={16} /> Panel rapido
-          </button>
-        </section>
-      )}
-
+    <div className="app-shell legacy-ops">
       <section className="alert-banner">
         <TriangleAlert size={18} />
         <span>
@@ -715,104 +523,7 @@ export function DashboardClient() {
         </span>
       </section>
 
-      {screen === 'overview' ? (
-        <section className="content-grid">
-          <article className="panel panel-wide">
-            <div className="panel-header">
-              <div>
-                <p className="eyebrow">Tendencia de ventas</p>
-                <h2>Grafico de lineas</h2>
-              </div>
-              <select value={period} onChange={(event) => setPeriod(event.target.value as typeof period)}>
-                <option value="today">Hoy</option>
-                <option value="7d">7 dias</option>
-                <option value="30d">30 dias</option>
-                <option value="90d">90 dias</option>
-              </select>
-            </div>
-            <div className="chart-wrap">
-              <svg viewBox="0 0 100 100" role="img" aria-label="Grafico de ventas" className="line-chart">
-                <defs>
-                  <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="rgba(80, 214, 255, 0.7)" />
-                    <stop offset="100%" stopColor="rgba(80, 214, 255, 0.05)" />
-                  </linearGradient>
-                </defs>
-                <polyline
-                  fill="none"
-                  stroke="var(--accent)"
-                  strokeWidth="3"
-                  points={trendPoints
-                    .map((point, index) => {
-                      const max = Math.max(...trendPoints.map((item) => item.value), 1);
-                      const x = (index / Math.max(trendPoints.length - 1, 1)) * 100;
-                      const y = 100 - (point.value / max) * 70 - 15;
-                      return `${x.toFixed(2)},${y.toFixed(2)}`;
-                    })
-                    .join(' ')}
-                />
-                <path d={`${linePath(trendPoints)} L 100 100 L 0 100 Z`} fill="url(#chartGradient)" opacity="0.5" />
-              </svg>
-              <div className="chart-labels">
-                {trendPoints.map((point) => (
-                  <span key={point.label}>{point.label}</span>
-                ))}
-              </div>
-            </div>
-          </article>
-
-          <article className="panel">
-            <div className="panel-header">
-              <div>
-                <p className="eyebrow">Productos</p>
-                <h2>Mas vendidos</h2>
-              </div>
-            </div>
-            <div className="list-card">
-              {topProducts.map((item, index) => (
-                <div key={item.product?.id ?? index} className="list-row">
-                  <strong>{index + 1}. {item.product?.name}</strong>
-                  <span>{item.quantity} u</span>
-                </div>
-              ))}
-            </div>
-          </article>
-
-          <article className="panel">
-            <div className="panel-header">
-              <div>
-                <p className="eyebrow">Alertas</p>
-                <h2>Stock bajo</h2>
-              </div>
-            </div>
-            <div className="list-card warning-list">
-              {lowStockProducts.map((product) => (
-                <div key={product.id} className="list-row">
-                  <strong>{product.name}</strong>
-                  <span>{product.currentStock} / {product.minStock}</span>
-                </div>
-              ))}
-            </div>
-          </article>
-
-          <article className="panel panel-wide">
-            <div className="panel-header">
-              <div>
-                <p className="eyebrow">Prediccion</p>
-                <h2>Que pedir ahora</h2>
-              </div>
-            </div>
-            <div className="forecast-grid">
-              {recommendations.length ? (
-                recommendations.map((item) => <div key={item} className="forecast-card">{item}</div>)
-              ) : (
-                <div className="forecast-card">Sin alertas por ahora.</div>
-              )}
-            </div>
-          </article>
-        </section>
-      ) : (
-        <section className="content-grid operations-grid">
+      <section className="content-grid operations-grid">
           <article className="panel panel-wide scanner-panel">
             <div className="panel-header">
               <div>
@@ -1031,19 +742,6 @@ export function DashboardClient() {
             </div>
           </article>
         </section>
-      )}
-    </main>
-  );
-}
-
-function Metric({ title, value, icon }: { title: string; value: string; icon: ReactNode }) {
-  return (
-    <div className="metric-card">
-      <div className="metric-icon">{icon}</div>
-      <div>
-        <p className="eyebrow">{title}</p>
-        <strong>{value}</strong>
-      </div>
     </div>
   );
 }
