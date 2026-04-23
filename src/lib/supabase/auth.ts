@@ -1,27 +1,40 @@
-import { adminSupabase } from './server';
+import { adminSupabase, createUserSupabase } from './server';
 
 export async function getRequestUser(request: Request) {
   if (!adminSupabase) {
     return null;
   }
 
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
+  const token = getAccessTokenFromRequest(request);
+  if (!token) {
     return null;
   }
 
-  const token = authHeader.slice('Bearer '.length);
+  // Validamos el token con el admin client (forma oficial de verificar un JWT).
   const { data, error } = await adminSupabase.auth.getUser(token);
-
   if (error || !data.user) {
     return null;
   }
 
-  const { data: profile } = await adminSupabase.from('profiles').select('*').eq('id', data.user.id).single();
+  // Creamos un cliente scopeado al JWT para todas las queries de datos.
+  // Cada endpoint debe usar auth.supabase (NO adminSupabase) para respetar RLS.
+  const supabase = createUserSupabase(token);
+  if (!supabase) {
+    return null;
+  }
+
+  // Leemos el profile con el cliente scopeado — la policy "profiles own row"
+  // permite que el usuario lea su propio registro.
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', data.user.id)
+    .single();
 
   return {
     user: data.user,
     profile,
+    supabase,
   };
 }
 

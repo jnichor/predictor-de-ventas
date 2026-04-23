@@ -1,27 +1,22 @@
 import { NextResponse } from 'next/server';
-import { adminSupabase } from '@/lib/supabase/server';
 import { getRequestUser } from '@/lib/supabase/auth';
+import { parsePeriod } from '@/lib/schemas';
 
 export async function GET(request: Request) {
-  if (!adminSupabase) {
-    return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 });
-  }
-
   const auth = await getRequestUser(request);
   if (!auth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const url = new URL(request.url);
-  const period = url.searchParams.get('period') ?? '30d';
+  const period = parsePeriod(request, '30d');
   const days = period === '7d' ? 7 : period === '90d' ? 90 : period === 'today' ? 1 : 30;
 
   const since = new Date();
   since.setDate(since.getDate() - days);
 
   const [productsResult, salesResult] = await Promise.all([
-    adminSupabase.from('products').select('id, name, current_stock, min_stock, unit_price'),
-    adminSupabase
+    auth.supabase.from('products').select('id, name, current_stock, min_stock, unit_price'),
+    auth.supabase
       .from('sales')
       .select('product_id, quantity, sold_at')
       .gte('sold_at', since.toISOString())

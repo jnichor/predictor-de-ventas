@@ -1,19 +1,18 @@
 import { NextResponse } from 'next/server';
-import { adminSupabase } from '@/lib/supabase/server';
 import { mapMovement } from '@/lib/supabase/mappers';
 import { getRequestUser } from '@/lib/supabase/auth';
+import { createMovementSchema, parseJsonBody } from '@/lib/schemas';
 
 export async function GET(request: Request) {
-  if (!adminSupabase) {
-    return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 });
-  }
-
   const auth = await getRequestUser(request);
   if (!auth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { data, error } = await adminSupabase.from('inventory_movements').select('*').order('created_at', { ascending: false });
+  const { data, error } = await auth.supabase
+    .from('inventory_movements')
+    .select('*')
+    .order('created_at', { ascending: false });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -23,21 +22,29 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!adminSupabase) {
-    return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 });
-  }
-
   const auth = await getRequestUser(request);
   if (!auth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const payload = await request.json();
-  const { data, error } = await adminSupabase.rpc('record_inventory_movement', {
+  const parsed = await parseJsonBody(request, createMovementSchema);
+  if (!parsed.ok) {
+    return parsed.response;
+  }
+  const payload = parsed.data;
+
+  if (payload.type === 'adjustment' && auth.profile?.role !== 'admin') {
+    return NextResponse.json(
+      { error: 'Solo el administrador puede registrar ajustes de inventario' },
+      { status: 403 },
+    );
+  }
+
+  const { data, error } = await auth.supabase.rpc('record_inventory_movement', {
     p_product_id: payload.product_id,
     p_type: payload.type,
     p_quantity: payload.quantity,
-    p_reason: payload.reason ?? '',
+    p_reason: payload.reason,
     p_created_by: auth.user.id,
     p_adjustment_direction: payload.adjustment_direction ?? null,
   });

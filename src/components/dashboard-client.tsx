@@ -3,8 +3,8 @@
 import type { FormEvent, ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Barcode, Boxes, LineChart, PackagePlus, ReceiptText, ScanBarcode, TriangleAlert } from 'lucide-react';
+import { toast } from 'sonner';
 import { BarcodeScanner } from './barcode-scanner';
-import { initialMovements, initialProducts, initialSales } from '@/lib/mock-data';
 import type { InventoryMovement, Product, Sale, TrendPoint } from '@/lib/types';
 import { money, toDateLabel } from '@/lib/utils';
 import { supabase } from '@/lib/supabase/client';
@@ -38,6 +38,12 @@ type InventoryFormState = {
 type LoginFormState = {
   email: string;
   password: string;
+};
+
+type InviteFormState = {
+  email: string;
+  name: string;
+  role: 'admin' | 'worker';
 };
 
 type CurrentUser = {
@@ -99,6 +105,12 @@ const emptyLoginForm: LoginFormState = {
   password: '',
 };
 
+const emptyInviteForm: InviteFormState = {
+  email: '',
+  name: '',
+  role: 'worker',
+};
+
 function createId(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -149,20 +161,20 @@ function linePath(points: TrendPoint[]) {
 export function DashboardClient() {
   const [session, setSession] = useState<Session | null>(null);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [sales, setSales] = useState<Sale[]>(initialSales);
-  const [movements, setMovements] = useState<InventoryMovement[]>(initialMovements);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [movements, setMovements] = useState<InventoryMovement[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const [productForm, setProductForm] = useState<ProductFormState>(emptyProductForm);
   const [saleForm, setSaleForm] = useState<SaleFormState>(emptySaleForm);
   const [inventoryForm, setInventoryForm] = useState<InventoryFormState>(emptyInventoryForm);
   const [loginForm, setLoginForm] = useState<LoginFormState>(emptyLoginForm);
-  const [notice, setNotice] = useState('');
+  const [inviteForm, setInviteForm] = useState<InviteFormState>(emptyInviteForm);
   const [reports, setReports] = useState<ReportState | null>(null);
   const [forecast, setForecast] = useState<ForecastItem[]>([]);
   const [period, setPeriod] = useState<'today' | '7d' | '30d' | '90d'>('7d');
   const [screen, setScreen] = useState<'overview' | 'operations'>('overview');
-  const [operationTab, setOperationTab] = useState<'sale' | 'inventory' | 'activity' | 'admin' | 'analytics'>('sale');
+  const [operationTab, setOperationTab] = useState<'sale' | 'inventory' | 'activity' | 'admin' | 'analytics' | 'users'>('sale');
 
   const loadCurrentUser = useCallback(async (accessToken: string) => {
     try {
@@ -173,13 +185,14 @@ export function DashboardClient() {
       });
 
       if (!response.ok) {
+        console.error('loadCurrentUser failed', response.status);
         return;
       }
 
       const data = await response.json();
       setCurrentUser(data.user ?? null);
-    } catch {
-      return;
+    } catch (error) {
+      console.error('loadCurrentUser error', error);
     }
   }, []);
 
@@ -192,13 +205,14 @@ export function DashboardClient() {
       });
 
       if (!response.ok) {
+        console.error('loadReports failed', response.status);
         return;
       }
 
       const data = await response.json();
       setReports(data);
-    } catch {
-      return;
+    } catch (error) {
+      console.error('loadReports error', error);
     }
   }, [period]);
 
@@ -211,17 +225,19 @@ export function DashboardClient() {
       });
 
       if (!response.ok) {
+        console.error('loadForecast failed', response.status);
         return;
       }
 
       const data = await response.json();
       setForecast(Array.isArray(data.recommendations) ? data.recommendations : []);
-    } catch {
-      return;
+    } catch (error) {
+      console.error('loadForecast error', error);
     }
   }, [period]);
 
   const loadDashboard = useCallback(async (accessToken?: string) => {
+    setIsLoadingData(true);
     try {
       const response = await fetch('/api/dashboard', {
         headers: accessToken
@@ -231,6 +247,7 @@ export function DashboardClient() {
           : undefined,
       });
       if (!response.ok) {
+        toast.error('No se pudieron cargar los datos del panel.');
         return;
       }
 
@@ -248,8 +265,11 @@ export function DashboardClient() {
         await loadReports(accessToken);
         await loadForecast(accessToken);
       }
-    } catch {
-      return;
+    } catch (error) {
+      console.error('loadDashboard error', error);
+      toast.error('Error de conexión al cargar el panel.');
+    } finally {
+      setIsLoadingData(false);
     }
   }, [loadForecast, loadReports]);
 
@@ -292,7 +312,7 @@ export function DashboardClient() {
     event.preventDefault();
 
     if (!supabase) {
-      setNotice('Falta configurar Supabase.');
+      toast.error('Falta configurar Supabase.');
       return;
     }
 
@@ -302,42 +322,13 @@ export function DashboardClient() {
     });
 
     if (error) {
-      setNotice(error.message);
+      toast.error(error.message);
       return;
     }
 
     setLoginForm(emptyLoginForm);
-    setNotice('Sesion iniciada.');
+    toast.success('Sesión iniciada.');
     await loadSession();
-  }
-
-  async function handleSignup(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!supabase) {
-      setNotice('Falta configurar Supabase.');
-      return;
-    }
-
-    const { error } = await supabase.auth.signUp({
-      email: loginForm.email,
-      password: loginForm.password,
-      options: {
-        data: {
-          name: loginForm.email.split('@')[0],
-          role: 'worker',
-        },
-      },
-    });
-
-    if (error) {
-      setNotice(error.message);
-      return;
-    }
-
-    setLoginForm(emptyLoginForm);
-    setNotice('Revisa tu correo electrónico proporcionado para confirmar tu cuenta');
-    setAuthMode('login');
   }
 
   async function handleLogout() {
@@ -348,7 +339,7 @@ export function DashboardClient() {
     await supabase.auth.signOut();
     setSession(null);
     setCurrentUser(null);
-    setNotice('Sesion cerrada.');
+    toast.success('Sesión cerrada.');
   }
 
   const trendPoints = useMemo(
@@ -417,8 +408,8 @@ export function DashboardClient() {
       <main className="app-shell auth-shell">
         <section className="panel auth-panel">
           <p className="eyebrow">Acceso al sistema</p>
-          <h1>{authMode === 'login' ? 'Iniciar sesion' : 'Crear cuenta'}</h1>
-          <form className="stack" onSubmit={authMode === 'login' ? handleLogin : handleSignup}>
+          <h1>Iniciar sesión</h1>
+          <form className="stack" onSubmit={handleLogin}>
             <label>
               Correo
               <input
@@ -426,6 +417,7 @@ export function DashboardClient() {
                 value={loginForm.email}
                 onChange={(event) => setLoginForm((current) => ({ ...current, email: event.target.value }))}
                 placeholder="trabajador@tienda.com"
+                autoComplete="email"
               />
             </label>
             <label>
@@ -435,14 +427,14 @@ export function DashboardClient() {
                 value={loginForm.password}
                 onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
                 placeholder="********"
+                autoComplete="current-password"
               />
             </label>
-            <button className="primary-button" type="submit">{authMode === 'login' ? 'Entrar' : 'Crear cuenta'}</button>
+            <button className="primary-button" type="submit">Entrar</button>
           </form>
-          <button className="secondary-button auth-toggle" type="button" onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}>
-            {authMode === 'login' ? 'No tengo cuenta' : 'Ya tengo cuenta'}
-          </button>
-          {notice ? <p className="auth-notice">{notice}</p> : null}
+          <p className="auth-notice muted">
+            ¿Sos un nuevo miembro del equipo? El administrador te debe enviar una invitación por email.
+          </p>
         </section>
       </main>
     );
@@ -453,7 +445,7 @@ export function DashboardClient() {
 
     const accessToken = session?.access_token;
     if (!accessToken) {
-      setNotice('No hay sesion activa.');
+      toast.error('No hay sesión activa.');
       return;
     }
 
@@ -462,7 +454,7 @@ export function DashboardClient() {
     const minimum = Number(productForm.minStock);
 
     if (!productForm.name || !productForm.barcode) {
-      setNotice('Falta completar nombre y codigo.');
+      toast.error('Falta completar nombre y código.');
       return;
     }
 
@@ -499,12 +491,12 @@ export function DashboardClient() {
 
     if (!response.ok) {
       const data = await response.json().catch(() => null);
-      setNotice(data?.error ?? 'No se pudo crear el producto.');
+      toast.error(data?.error ?? 'No se pudo crear el producto.');
       return;
     }
 
     setProductForm(emptyProductForm);
-    setNotice('Producto creado correctamente.');
+    toast.success('Producto creado correctamente.');
     await loadDashboard(accessToken);
   }
 
@@ -513,25 +505,25 @@ export function DashboardClient() {
 
     const accessToken = session?.access_token;
     if (!accessToken) {
-      setNotice('No hay sesion activa.');
+      toast.error('No hay sesión activa.');
       return;
     }
 
     const product = products.find((item) => item.barcode === saleForm.barcode || item.name === saleForm.barcode);
     if (!product) {
-      setNotice('No encontre el producto.');
+      toast.error('No se encontró el producto.');
       return;
     }
 
     const quantity = Number(saleForm.quantity);
     const discount = Number(saleForm.discount);
     if (!Number.isFinite(quantity) || quantity <= 0) {
-      setNotice('La cantidad debe ser mayor a cero.');
+      toast.error('La cantidad debe ser mayor a cero.');
       return;
     }
 
     if (quantity > product.currentStock) {
-      setNotice('No hay stock suficiente para esa venta.');
+      toast.error('No hay stock suficiente para esa venta.');
       return;
     }
 
@@ -551,12 +543,12 @@ export function DashboardClient() {
 
     if (!response.ok) {
       const data = await response.json().catch(() => null);
-      setNotice(data?.error ?? 'No se pudo registrar la venta.');
+      toast.error(data?.error ?? 'No se pudo registrar la venta.');
       return;
     }
 
     setSaleForm(emptySaleForm);
-    setNotice('Venta registrada y stock actualizado.');
+    toast.success('Venta registrada y stock actualizado.');
     await loadDashboard(accessToken);
   }
 
@@ -565,24 +557,24 @@ export function DashboardClient() {
 
     const accessToken = session?.access_token;
     if (!accessToken) {
-      setNotice('No hay sesion activa.');
+      toast.error('No hay sesión activa.');
       return;
     }
 
     const product = products.find((item) => item.barcode === inventoryForm.barcode || item.name === inventoryForm.barcode);
     if (!product) {
-      setNotice('No encontre el producto.');
+      toast.error('No se encontró el producto.');
       return;
     }
 
     const quantity = Number(inventoryForm.quantity);
     if (!Number.isFinite(quantity) || quantity <= 0) {
-      setNotice('La cantidad debe ser mayor a cero.');
+      toast.error('La cantidad debe ser mayor a cero.');
       return;
     }
 
     if ((inventoryForm.type === 'exit' || inventoryForm.adjustmentDirection === 'decrease') && quantity > product.currentStock) {
-      setNotice('No hay stock suficiente para ese movimiento.');
+      toast.error('No hay stock suficiente para ese movimiento.');
       return;
     }
 
@@ -603,13 +595,50 @@ export function DashboardClient() {
 
     if (!response.ok) {
       const data = await response.json().catch(() => null);
-      setNotice(data?.error ?? 'No se pudo registrar el movimiento.');
+      toast.error(data?.error ?? 'No se pudo registrar el movimiento.');
       return;
     }
 
     setInventoryForm(emptyInventoryForm);
-    setNotice('Movimiento de inventario registrado.');
+    toast.success('Movimiento de inventario registrado.');
     await loadDashboard(accessToken);
+  }
+
+  async function handleInviteUser(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const accessToken = session?.access_token;
+    if (!accessToken) {
+      toast.error('No hay sesión activa.');
+      return;
+    }
+
+    if (!inviteForm.email) {
+      toast.error('Falta el email del invitado.');
+      return;
+    }
+
+    const response = await fetch('/api/admin/users/invite', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        email: inviteForm.email,
+        name: inviteForm.name || undefined,
+        role: inviteForm.role,
+      }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      toast.error(data?.error ?? 'No se pudo enviar la invitación.');
+      return;
+    }
+
+    setInviteForm(emptyInviteForm);
+    toast.success(`Invitación enviada a ${inviteForm.email}.`);
   }
 
   return (
@@ -680,9 +709,10 @@ export function DashboardClient() {
       <section className="alert-banner">
         <TriangleAlert size={18} />
         <span>
-          Alertas: {lowStockProducts.length} productos con stock bajo y {sales.length} ventas en historial.
+          {isLoadingData && products.length === 0
+            ? 'Cargando datos…'
+            : `Alertas: ${lowStockProducts.length} productos con stock bajo y ${sales.length} ventas en historial.`}
         </span>
-        {notice ? <strong>{notice}</strong> : null}
       </section>
 
       {screen === 'overview' ? (
@@ -792,7 +822,7 @@ export function DashboardClient() {
             </div>
             <BarcodeScanner onDetected={(value) => {
               setSaleForm((current) => ({ ...current, barcode: value }));
-              setNotice(`Codigo detectado: ${value}`);
+              toast.success(`Código detectado: ${value}`);
             }} />
           </article>
 
@@ -808,7 +838,8 @@ export function DashboardClient() {
               <button type="button" className={operationTab === 'inventory' ? 'subtab active' : 'subtab'} onClick={() => setOperationTab('inventory')}>Inventario</button>
               <button type="button" className={operationTab === 'activity' ? 'subtab active' : 'subtab'} onClick={() => setOperationTab('activity')}>Historial</button>
               <button type="button" className={operationTab === 'analytics' ? 'subtab active' : 'subtab'} onClick={() => setOperationTab('analytics')}>Analítica</button>
-              {currentUser?.role === 'admin' ? <button type="button" className={operationTab === 'admin' ? 'subtab active' : 'subtab'} onClick={() => setOperationTab('admin')}>Admin</button> : null}
+              {currentUser?.role === 'admin' ? <button type="button" className={operationTab === 'admin' ? 'subtab active' : 'subtab'} onClick={() => setOperationTab('admin')}>Productos</button> : null}
+              {currentUser?.role === 'admin' ? <button type="button" className={operationTab === 'users' ? 'subtab active' : 'subtab'} onClick={() => setOperationTab('users')}>Usuarios</button> : null}
             </div>
 
             <div className="operation-panel">
@@ -851,7 +882,7 @@ export function DashboardClient() {
                     <select value={inventoryForm.type} onChange={(event) => setInventoryForm((current) => ({ ...current, type: event.target.value as InventoryFormState['type'] }))}>
                       <option value="entry">Entrada</option>
                       <option value="exit">Salida</option>
-                      <option value="adjustment">Ajuste</option>
+                      {currentUser?.role === 'admin' ? <option value="adjustment">Ajuste</option> : null}
                     </select>
                   </label>
                   {inventoryForm.type === 'adjustment' ? (
@@ -940,6 +971,43 @@ export function DashboardClient() {
                     <textarea value={productForm.description} onChange={(event) => setProductForm((current) => ({ ...current, description: event.target.value }))} rows={3} />
                   </label>
                   <button className="primary-button" type="submit">Guardar producto</button>
+                </form>
+              ) : null}
+
+              {operationTab === 'users' && currentUser?.role === 'admin' ? (
+                <form className="stack" onSubmit={handleInviteUser}>
+                  <p className="muted">
+                    Ingresá el email del nuevo miembro. Va a recibir un link para completar su contraseña y entrar al sistema.
+                  </p>
+                  <label>
+                    Email
+                    <input
+                      type="email"
+                      value={inviteForm.email}
+                      onChange={(event) => setInviteForm((current) => ({ ...current, email: event.target.value }))}
+                      placeholder="nuevo@tienda.com"
+                      autoComplete="off"
+                    />
+                  </label>
+                  <label>
+                    Nombre (opcional)
+                    <input
+                      value={inviteForm.name}
+                      onChange={(event) => setInviteForm((current) => ({ ...current, name: event.target.value }))}
+                      placeholder="Ana Pérez"
+                    />
+                  </label>
+                  <label>
+                    Rol
+                    <select
+                      value={inviteForm.role}
+                      onChange={(event) => setInviteForm((current) => ({ ...current, role: event.target.value as InviteFormState['role'] }))}
+                    >
+                      <option value="worker">Worker (ventas + inventario)</option>
+                      <option value="admin">Admin (acceso completo)</option>
+                    </select>
+                  </label>
+                  <button className="primary-button" type="submit">Enviar invitación</button>
                 </form>
               ) : null}
             </div>

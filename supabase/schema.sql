@@ -61,24 +61,23 @@ on public.profiles
 for select
 using (auth.uid() = id);
 
+-- IMPORTANTE: este trigger NO promueve nadie a admin automáticamente.
+-- Todos los usuarios nuevos nacen como 'worker' salvo que el metadata del signup
+-- tenga un rol explícito (ese caso sólo ocurre cuando el admin invita desde el
+-- endpoint /api/admin/users/invite, que requiere rol admin).
+-- El PRIMER admin se crea manualmente con el UPDATE documentado en el README.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer
 set search_path = public
 as $$
-declare
-  v_role text;
 begin
-  select case when count(*) = 0 then 'admin' else 'worker' end
-  into v_role
-  from public.profiles;
-
   insert into public.profiles (id, name, role)
   values (
     new.id,
     coalesce(new.raw_user_meta_data ->> 'name', split_part(new.email, '@', 1)),
-    coalesce(new.raw_user_meta_data ->> 'role', v_role)
+    coalesce(new.raw_user_meta_data ->> 'role', 'worker')
   )
   on conflict (id) do nothing;
 

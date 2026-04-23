@@ -1,19 +1,18 @@
 import { NextResponse } from 'next/server';
-import { adminSupabase } from '@/lib/supabase/server';
 import { mapProduct } from '@/lib/supabase/mappers';
 import { getRequestUser } from '@/lib/supabase/auth';
+import { createProductSchema, parseJsonBody } from '@/lib/schemas';
 
 export async function GET(request: Request) {
-  if (!adminSupabase) {
-    return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 });
-  }
-
   const auth = await getRequestUser(request);
   if (!auth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { data, error } = await adminSupabase.from('products').select('*').order('updated_at', { ascending: false });
+  const { data, error } = await auth.supabase
+    .from('products')
+    .select('*')
+    .order('updated_at', { ascending: false });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -23,10 +22,6 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!adminSupabase) {
-    return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 });
-  }
-
   const auth = await getRequestUser(request);
   if (!auth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -36,17 +31,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const payload = await request.json();
-  const { data, error } = await adminSupabase
+  const parsed = await parseJsonBody(request, createProductSchema);
+  if (!parsed.ok) {
+    return parsed.response;
+  }
+  const payload = parsed.data;
+
+  const { data, error } = await auth.supabase
     .from('products')
     .insert({
       barcode: payload.barcode,
       name: payload.name,
-      description: payload.description ?? '',
-      category: payload.category ?? 'General',
-      unit_price: payload.unit_price ?? 0,
-      current_stock: payload.current_stock ?? 0,
-      min_stock: payload.min_stock ?? 0,
+      description: payload.description,
+      category: payload.category,
+      unit_price: payload.unit_price,
+      current_stock: payload.current_stock,
+      min_stock: payload.min_stock,
       active: true,
     })
     .select('*')
@@ -56,12 +56,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  if ((payload.current_stock ?? 0) > 0) {
-    await adminSupabase.from('inventory_movements').insert({
+  if (payload.current_stock > 0) {
+    await auth.supabase.from('inventory_movements').insert({
       product_id: data.id,
       type: 'entry',
       quantity: payload.current_stock,
       reason: 'Alta inicial del producto',
+      created_by: auth.user.id,
     });
   }
 

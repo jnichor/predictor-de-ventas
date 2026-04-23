@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
+import { Toaster } from 'sonner';
 import '@/app/globals.css';
 
 export const metadata: Metadata = {
@@ -10,7 +11,17 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        {children}
+        <Toaster
+          position="top-right"
+          theme="dark"
+          richColors
+          closeButton
+          expand
+          duration={4000}
+        />
+      </body>
     </html>
   );
 }
